@@ -1,102 +1,440 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Dec 21 11:07:47 2022
+Created on Thu Jan 19 10:44:17 2023.
 
 @author: ISipila
+
+SmartGeocode class takes a starting and ending column, list of local authorities, and finds the shortest path between the start and end 
+points. We do this by using graph theory, specifically the Breadth-first search method. 
+
 """
+
 from pathlib import Path
 import pandas as pd
+from typing import Any, Dict, List, Tuple
+import json
 
-class SelectGeocode:
+
+def BFS_SP(graph: Dict, start: str, goal: str) -> List[Any]:
+    """Breadth-first search."""
+    explored = []
+     
+    # Queue for traversing the
+    # graph in the BFS
+    queue = [[start]]
+     
+    # If the desired node is
+    # reached
+    if start == goal:
+        print("Same Node")
+        return 
+     
+    # Loop to traverse the graph
+    # with the help of the queue
+    while queue:
+        path = queue.pop(0)
+        node = path[-1]
+
+        # Condition to check if the
+        # current node is not visited
+        if node not in explored:
+            if isinstance(node, tuple):
+                neighbours = graph[node[0]]
+            else:
+                neighbours = graph[node]
+
+            # Loop to iterate over the
+            # neighbours of the node
+            for neighbour in neighbours:
+                new_path = list(path)
+                new_path.append(neighbour)
+                queue.append(new_path)
+                 
+                # Condition to check if the
+                # neighbour node is the goal
+                if neighbour[0] == goal:
+                    #print("Shortest path = ", *new_path)
+                    return new_path
+            explored.append(node)
+ 
+    # Condition when the nodes are not connected
+    print("A connecting path doesn't exist")
+    return
+
+
+class SmartGeocodeLookup:
+    """Use graph theory to find shortest path between table columns.
+    
+    This class works as follows. The user provides the names of the starting and ending columns, and a list of local authorities when 
+    initialising the class. They can then get the appropriate subset of the geocodes using the get_filtered_geocodes() method.
+    
+    Internally, on initialising the class, a json file is either created based on the location of the lookup tables or read, if the json 
+    file exists. Then, using the information contained in the json file, a graph of connections between table columns is created. Following
+    the creation of the graph, all possible starting points are searched for (i.e. which tables contain the user-provided starting_table). 
+    After this, we look for the shortest paths. To do this, we look for all possible paths from all starting_columns to ending_columns and
+    count how many steps there are between each table. We choose the shortest link, as we then join these tables together iteratively using
+    outer join. Finally, we filter the table by the local_authorities list.
     """
-    Use this class to find the appropriate GSS codes for your local authority for use with ONS NOMIS API.
-
-    Provide the name of the local authority or a known GSS code for the local authority.
-    The get_wards method gives a list of GSS codes for wards. 
-    Similarly, get_output_areas method gives a list of GSS codes for output areas.
     
-    TODO:
-        add more lookup tables
-        Fix module structure so that no need to feed census_collection & follow the structure from 
-        https://geoportal.statistics.gov.uk/search?collection=Dataset&sort=-created&tags=all(LUP_ADM)
+    def __init__(self, starting_column: str = None, ending_column: str = None, local_authorities: List = None, 
+                 lookups_location: str = "../lookups/", lookup_table_cache: str = 'json_data.json'):
+        """Initialise SmartGeocodeLookup."""
+        self.starting_column = starting_column                              # start point in the path search
+        self.ending_column = ending_column                                  # end point in the path search
+        self.local_authorities = local_authorities                          # list of local authorities to get the geocodes for
+        self.lookups = Path(lookups_location)                               # where lookup tables are located
+        self.json_file_name = lookup_table_cache                            # where to save the lookup table info
         
-    """
+        
+        
+        # hard code the local authorities columns, but keep in init to allow additions later        
+        self._la_possibilities = ['LAD', 'UTLA', 'LTLA']                    # local authority column names - these are hidden, but available
+        
+        self.files_and_folders = self._construct_or_read_json_file()        # method to create a json file or read it
+        if starting_column and ending_column and local_authorities:
+            self.graph, self.table_column_pairs = self.create_graph()       # create the graph for connecting columns
+            self.starting_points = self.get_starting_point()                # find all possible starting points given criteria
+            self.shortest_path = self.find_shortest_path()                  # get the shortest path
+        
     
-    def __init__(self, local_authority: str = 'Lewisham', census_collection: str = 'census_2021', gss_code: str = None, 
-                 get_code_table: bool = False):
-        """Initialize SelectGeocode."""        
-        self.folder = Path(f'../lookups/{str(census_collection)}')  # path to lookup tables
-        self.local_authority = local_authority.capitalize()
-        self.gss_code = gss_code
-        
-        self.get_code_table = get_code_table
-        
-        self.df = None
-        
-        
-    def get_wards(self, get_code_table: bool = False):
-        """
-        Get ward level GSS codes.
-        
-        You can also get all codes as a Pandas dataframe by setting get_code_table to True.
-        """
-        ward_csv = self.folder.joinpath('Ward_lookup.csv')            
-        self.df = pd.read_csv(ward_csv)
-       
-        # if get_code_table is true, just return the Ward_lookup.csv as a Pandas dataframe.
-        self._get_whole_table()
-        
-        local_authority_name_column = 'LAD21NM'
-        local_authority_code_column = 'LAD21CD'
-        
-        output_columns = ['_WD21CD', 'WD21NM']
-        
-        subset = self._return_subset(local_authority_name_column, local_authority_code_column, output_columns)
-        
-        return subset
-        
-        
-    def get_output_areas(self, level: str = 'all'):
-        """
-        Get output area level GSS codes.
-        
-        You can also get all codes as a Pandas dataframe by setting get_code_table to True.
-        Similarly, you can choose the output area level by setting it as one of 'all' (for all levels), 'oa' (smallest Output Area), 
-        'lsoa' (Lower layer Super Output Area), or 'msoa' (Middle layer Super Output Area).
-        """
-        output_area_csv = self.folder.joinpath('OA_lookup.csv')
-        self.df = pd.read_csv(output_area_csv, encoding='latin-1', dtype='unicode')
-        
-        # if get_code_table is true, just return the OA_lookup.csv as a Pandas dataframe.
-        self._get_whole_table()
-        
-        output_area_codes = {'all': ['oa21cd', 'lsoa21cd', 'msoa21cd'], 'oa': ['oa21cd'], 'lsoa': ['lsoa21cd'], 'msoa': ['msoa21cd']}
-        output_columns = output_area_codes[level]
-        
-        local_authority_name_column = 'lad22nm'
-        local_authority_code_column = 'lad22cd'
-        
-        subset = self._return_subset(local_authority_name_column, local_authority_code_column, output_columns)
-
-        return subset
-    
-    def _get_whole_table(self):
-        if self.get_code_table:
-            return self.df
-        else:
-            pass
-    
-    def _return_subset(self, local_authority_name_column, local_authority_code_column, output_columns):
-        if self.gss_code is None:
-            subset = self.df[self.df[local_authority_name_column]==self.local_authority]
+    def get_filtered_geocodes(self) -> pd.DataFrame():
+        """Get pandas dataframe filtered by the local_authorities list."""
+        if len(self.shortest_path) == 1:
+            directory_locations = {}
+            for folder, files_and_components in self.files_and_folders.items():
+                file_names = files_and_components.keys()
+                if self.shortest_path[0] in file_names:
+                    directory_locations[self.shortest_path[0]] = self.lookups.joinpath(Path(folder)).joinpath(Path(self.shortest_path[0]))
+            open_df = self.open_table_as_pandas(directory_locations[self.shortest_path[0]])
             
+            geocodes_subset = self.filter_by_local_authority(open_df)                        
+            return geocodes_subset
         else:
-            subset = self.df[self.df[local_authority_code_column]==self.gss_code]
-        subset = subset[output_columns]
-        return subset
+            joined_table = self.join_tables()
+            joined_table = joined_table.drop_duplicates()
+            return joined_table
+    
+    
+    def open_table_as_pandas(self, file_path_object: Any) -> pd.DataFrame():
+        """Read table as pandas dataframe."""
+        extension = file_path_object.suffix
+        if extension == '.csv':
+            try:
+                df = pd.read_csv(file_path_object, low_memory=False)
+
+            except UnicodeDecodeError as e:
+                print(f'Got UnicodeDecodeError {e} for file {file_path_object} - changing encoding to latin-1')
+                df = pd.read_csv(file_path_object, encoding='latin-1', low_memory=False)
+            finally:
+                return df
+                
+        elif extension == '.xlsx':
+            df = pd.read_excel(file_path_object, sheet_name=0, low_memory=False)
+            return df
+    
+    
+    def _construct_or_read_json_file(self) -> None:
+        """Hidden method that decides whether the JSON file is constructed or read."""
+        lookup_folder_contents = [path for path in list(self.lookups.iterdir()) if path.is_file()]
+        if self.lookups.joinpath(self.json_file_name) in lookup_folder_contents:
+            print(f'Reading JSON file {self.json_file_name}')
+            return self._read_json_lookup_table()
         
+        else:
+            print('No JSON file found. Generating one for faster lookups in the future')
+            self._create_json_file_for_lookups()
+            return self._read_json_lookup_table()
         
-    def list_all_collections(self):
-        """TODO: Clean the list of paths to show directory structure."""
-        main_path = Path('../lookups')
-        return list(main_path.iterdir())
+    
+    def _read_json_lookup_table(self) -> Dict[str, str]:
+        """Hidden method for reading the JSON file."""
+        tables_as_json = self._load_json(self.lookups.joinpath(self.json_file_name))
+        return tables_as_json
+    
+    
+    def _load_json(self, file: str) -> Any:
+        """Load JSON file."""
+        with open(file) as json_data:
+            d = json.load(json_data)
+            json_data.close()
+        return d
+
+
+    def _create_json_file_for_lookups(self):
+        """Create a JSON file of all lookup tables."""
+        folders = [folder for folder in list(self.lookups.iterdir()) if folder.is_dir()]
+        files_and_folders = {folder.name: {} for folder in folders}
+        for folder in folders:
+            files = list(folder.iterdir())    
+            for file in files:
+                try:
+                    df = self.open_table_as_pandas(file)
+                    files_and_folders[folder.name][file.name] = {'columns': [], 'useful_columns':[]}
+                    cols = list(df.columns)
+                    # there are some unnecessary columns, so lets limit the columns to just ones that end in 'cd':
+                    useful_columns = [col for col in cols if col[-2:].upper()=='CD']
+                    files_and_folders[folder.name][file.name]['columns'].extend(cols)
+                    files_and_folders[folder.name][file.name]['useful_columns'].extend(useful_columns)
+
+                except TypeError:
+                    print("Not a .csv or .xlsx file type")
+                    continue
+                
+        
+        with open(f'{self.lookups.joinpath(self.json_file_name)}', 'w') as outfile:
+            json.dump(files_and_folders, outfile, indent=4)
+            
+    
+    def create_graph(self) -> Tuple[Dict, List]:
+        """Create a graph of connections between tables using common column names."""
+        graph = {}
+        
+        table_column_pairs = []
+        for year, table_data in self.files_and_folders.items():
+            for table_name, column_data in table_data.items():
+                table_column_pairs.append((table_name, column_data['useful_columns']))
+        
+        for enum, (table, columns) in enumerate(table_column_pairs):
+            graph[table] = []
+            table_columns_comparison = table_column_pairs.copy()
+            table_columns_comparison.pop(enum)
+            for comparison_table, comparison_columns in table_columns_comparison:
+                shared_columns = list(set(columns).intersection(set(comparison_columns)))
+                for shared_column in shared_columns:
+                    graph[table].append((comparison_table, shared_column))
+                    
+        return graph, table_column_pairs
+    
+    
+    def get_starting_point(self):
+        """Starting point is hard coded as being from any table with 'LAD', 'UTLA', or 'LTLA' columns."""
+        starting_points = {}
+        
+        for folder, files in self.files_and_folders.items():
+            for file_name, columns in files.items():
+                for la_col in self._la_possibilities:
+                    la_nm_col_subset = [col for col in columns['columns'] if col[:len(la_col)].upper() in self._la_possibilities and col[-2:].upper() == 'NM']
+                    la_cd_col_subset = [col for col in columns['columns'] if col[:len(la_col)].upper() in self._la_possibilities and col[-2:].upper() == 'CD']
+                    if la_col in [col[:len(la_col)].upper() for col in columns['columns']]:
+                        if self.starting_column in columns['useful_columns']:
+                            starting_points[file_name] = {'columns': columns['columns'], 'la_nm_columns': la_nm_col_subset, 'la_cd_columns': la_cd_col_subset, 'useful_columns': columns['useful_columns']}
+        if starting_points:
+            return starting_points
+        else:
+            print(f"Sorry, no tables containing column {self.starting_column} - make sure the chosen column ends in 'CD'")
+
+
+    def find_paths(self) -> Dict[str, List]:
+        """Find all paths given all start and end options using BFS_SP function."""
+        end_options = []
+        for table, columns in self.table_column_pairs:
+            if self.ending_column in columns:
+                end_options.append(table)
+        
+        path_options = {}
+        for start_table in self.starting_points.keys():
+            path_options[start_table] = {}
+            for end_table in end_options:
+                #print(start_table, end_table)
+                
+                shortest_path = BFS_SP(self.graph, start_table, end_table)
+                #print('\n Shortest path: ', shortest_path, '\n')
+                path_options[start_table][end_table] = shortest_path
+        
+        return path_options
+    
+    
+    def find_shortest_path(self) -> List[str]:
+        """From all path options, choose shortest."""
+        all_paths = self.find_paths()
+        shortest_path_length = 99
+        shortest_path = None
+        for path_start, path_end_options in all_paths.items():
+            for path_end_option, path_route in path_end_options.items():
+                if isinstance(path_route, type(None)):
+                    print('Shortest path is in the same table')
+                    shortest_path = [path_start]
+                    return shortest_path
+                if len(path_route) < shortest_path_length:
+                    shortest_path_length = len(path_route)
+                    shortest_path = path_route
+        print(shortest_path)
+        return shortest_path
+      
+    
+    def join_tables(self) -> pd.DataFrame():
+        """If multiple tables in path, apply outer merge."""
+        starting_csv = self.shortest_path[0]
+        
+        directory_locations = {}
+        for folder, files_and_components in self.files_and_folders.items():
+            file_names = files_and_components.keys()#
+            if starting_csv in file_names:
+                directory_locations[starting_csv] = self.lookups.joinpath(Path(folder)).joinpath(Path(starting_csv))
+            for connecting_table in self.shortest_path[1:]:
+                if connecting_table[0] in file_names:
+                    directory_locations[connecting_table[0]] = self.lookups.joinpath(Path(folder)).joinpath(Path(connecting_table[0]))
+    
+        first_table = self.open_table_as_pandas(directory_locations[starting_csv])
+        first_table = self.filter_by_local_authority(first_table)
+        first_table_columns = [col.upper() for col in list(first_table.columns)]
+        first_table.columns = first_table_columns
+
+        for table_to_join in self.shortest_path[1:]:
+            second_table = pd.read_csv(directory_locations[table_to_join[0]])
+            second_table_columns = [col.upper() for col in list(second_table.columns)]
+            second_table.columns = second_table_columns
+
+            first_table = first_table.merge(second_table, on=table_to_join[1], how='left')
+        return first_table
+    
+    
+    def filter_by_local_authority(self, table_to_filter: pd.DataFrame()) -> pd.DataFrame():
+        """Filter the table_to_filter by local authority list."""
+        joined_table_columns = table_to_filter.columns
+        
+        all_local_auth_columns = []
+        for key in self.starting_points.keys():
+            all_local_auth_columns.extend(self.starting_points[key]['la_nm_columns'])
+        all_local_auth_columns = list(set(all_local_auth_columns))
+        
+        local_auth_columns_present_in_joined_table = []
+        for possibility in all_local_auth_columns:
+            for joined_column in joined_table_columns:
+                if possibility == joined_column[:len(possibility)]:
+                    local_auth_columns_present_in_joined_table.append(joined_column)
+        
+        chosen_local_auth_column = local_auth_columns_present_in_joined_table[0]
+
+        local_authority_subset = table_to_filter[table_to_filter[chosen_local_auth_column].isin(self.local_authorities)]
+        local_authority_subset = local_authority_subset.drop_duplicates()
+        return local_authority_subset
+
+
+class GeoHelper(SmartGeocodeLookup):
+    """GeoHelper class helps with finding the starting and ending columns.
+    
+    This class provides three tools: 
+        1) geography_keys(), which outputs a dictionary of short-hand descriptions of geographic areas
+        2) available_geographies(), which takes the optional 'year' argument and outputs all available geographies.
+        3) year_options attribute, which simply outputs the 'year' options that can then be used with available_geographies() method.
+    """
+    
+    def __init__(self):
+        """Initialise GeoHelper by inherting from SmartGeocodeLookup."""
+        super().__init__()
+        self.year_options = self._get_geocodes_for_years()
+    
+    
+    @staticmethod
+    def geography_keys():
+        """Get the short-hand descriptions of geographic areas."""
+        print('\nAdd a year code (e.g. 11 for 2011) and CD to the below geography codes when choosing the right geography start and end points.') 
+        print('For example, choose WD22CD as a starting point and WD11CD as an end point to get the lookup table from 2022 wards to 2011 wards.')
+        geography_keys = {'BUA': 'Built-up area',
+                          'BUASD': 'Built-up area sub-divisions',
+                          'CAUTH': 'Combined authority',
+                          'CCG': 'Clinical commissioning group', 
+                          'CED': 'County electoral division',
+                          'CMWD': 'Census-merged wards',
+                          'CTRY': 'Country',
+                          'CTY': 'County',
+                          'EER': 'European electoral region', 
+                          'LAD': 'Local authority district',
+                          'LAU1': 'Local administrative unit 1 (Eurostat)',
+                          'LAU2': 'Local administrative unit 2 (Eurostat)',
+                          'LPA': 'Local planning authority',
+                          'LSOA': 'Lower layer super output area',
+                          'LTLA': 'Lower-tier local authority',
+                          'MSOA': 'Middle layer super output area',
+                          'NAT': 'Nations (?)',
+                          'NHSER': 'NHS England region',
+                          'NUTS1': 'Nomenclature of territorial units for statistics (Eurostat)',
+                          'NUTS2': 'Nomenclature of territorial units for statistics (Eurostat)',
+                          'NUTS3': 'Nomenclature of territorial units for statistics (Eurostat)',
+                          'OA': 'Output area',
+                          'PCO': 'Primary care organisation',
+                          'PCON': 'Westminster parliamentary constituency',
+                          'RGN': 'Region',
+                          'SHA': 'Strategic health authority',
+                          'STP': 'Sustainability and transformation partnerships',
+                          'TTWA': 'Travel to work area',
+                          'UA': 'Unitary authority',
+                          'UTLA': 'Upper-tier local authority',
+                          'WD': 'Ward',
+                          'WZ': 'Workplace zone'}
+        return geography_keys
+    
+    def _get_geocodes_for_years(self) -> List[str]:
+        """Output the year options."""
+        year_options = [item.parts[-1] for item in list(self.lookups.iterdir()) if item.is_dir()]
+        return year_options
+
+
+    def get_available_geocodes(self, selected_year: Dict[str, Dict]):
+        """Geta set of geocode columns for all selected lookup tables."""
+        all_columns = []
+        for table in selected_year.keys():
+            all_columns.extend(selected_year[table]['useful_columns'])        
+        all_columns = list(set([col.upper() for col in all_columns]))
+        return sorted(all_columns)
+    
+    
+    def available_geographies(self, year: str = None) -> Dict[str, str]:
+        """Get the available geographies for your chosen lookup year."""
+        print("\nAll available geographies:\n")
+        if year:
+            year = self._valid_year_choice(year)
+            selected_year_tables = self._tables_by_year(year)
+            geocode_columns = self.get_available_geocodes(selected_year_tables)
+            return geocode_columns
+
+        else:
+            all_geocode_columns = []
+            for year in self.year_options:
+                selected_year_tables = self._tables_by_year(year)
+                geocode_columns = self.get_available_geocodes(selected_year_tables)
+                all_geocode_columns.extend(geocode_columns)
+            all_geocode_columns = list(set(all_geocode_columns))
+            return sorted(all_geocode_columns)
+
+    
+    def _valid_year_choice(self, selected_year: str) -> str:
+        """Make sure chosen lookup year is valid."""
+        selected_year = str(selected_year)
+        assert (selected_year in self.year_options), f"{selected_year} not in {self.year_options} - please pick one of the options"
+        return selected_year
+    
+    
+    def _tables_by_year(self, selected_year: str) -> Dict[str, Dict]:
+        """Return tables by selected lookup year."""
+        for year, tables in self.files_and_folders.items():
+            if selected_year == year:
+                return tables
+    
+
+def _test_smart_lookup():
+    print('Testing SmartGeocodeLookup')
+
+    # get all tables and their columns
+    gss = SmartGeocodeLookup(starting_column='LAD22CD', ending_column='WD22CD', local_authorities=['Lewisham'])
+   
+    print('shortest path:', gss.shortest_path)
+    
+    filtered = gss.get_filtered_geocodes()
+    print(len(filtered))
+
+def _test_geohelper():
+    print('\nTesting GeoHelper')
+    geo_help = GeoHelper()
+    print('\n year options:')
+    print(geo_help.year_options)
+    print(geo_help.geography_keys())
+    print(geo_help.available_geographies())
+
+
+if __name__ == '__main__':
+    _test_smart_lookup()
+    _test_geohelper()
+    
+    
