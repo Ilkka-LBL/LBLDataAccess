@@ -13,7 +13,8 @@ setup(
     author='Ilkka Sipila',
     author_email='ilkka.sipila@lewisham.gov.uk',
     packages=find_packages(include=['LBLDataAccess', 'LBLDataAccess.*']),
-    package_data={'LBLDataAccess': ['config/config.json', 'lookups/*.json', 'lookups/*/*.csv', 'lookups/*/*.xlsx']},
+    package_data={'LBLDataAccess': ['config/config.json']},
+    data_files=[('lookups', ['*/*.csv', '*/*.xlsx'])],
     install_requires=[
         'requests',
         'pandas',
