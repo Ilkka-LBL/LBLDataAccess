@@ -17,10 +17,8 @@ SmartGeocodeLookup class and will slow the process down the first time, but once
 class the speed will be back to normal.
 
 ## Getting started
-Start Spyder under nomisenv virtual environment in Anaconda Launcher.
-Navigate to your project folder and import this Github repo:
-
-""" INSTRUCTIONS HERE """
+To install this package:
+`python -m pip install git+https://github.com/Ilkka-LBL/getting-to-know-census-data.git`
 
 ## Pre-requisite
 The pre-requisite for using the NOMIS class is that you'll need to register for NOMIS and find your API key (www.nomisweb.co.uk) in 
@@ -35,7 +33,7 @@ To get help with selecting geocodes, you must first import GeoHelper
 ```
 from LBLDataAccess.load_geocodes import GeoHelper
 
-geo_help = Geohelper()
+geo_help = GeoHelper()
 ```
 
 GeoHelper class has a few helpful options to select the correct GSS codes to use with NOMIS.
