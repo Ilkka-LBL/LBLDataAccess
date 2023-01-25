@@ -15,12 +15,7 @@ setup(
     packages=find_packages(include=['LBLDataAccess', 'LBLDataAccess.*']),
     package_data={'LBLDataAccess': ['config/config.json']},
     install_requires=[
-        'pathlib',
         'requests',
         'pandas',
-        'dataclasses',
-        'typing',
-        'shutil',
-        'json'
     ],
 )
