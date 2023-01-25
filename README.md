@@ -18,7 +18,7 @@ class the speed will be back to normal.
 
 ## Getting started
 To install this package:
-`python -m pip install git+https://github.com/Ilkka-LBL/getting-to-know-census-data.git`
+`python -m pip install git+https://github.com/Ilkka-LBL/LBLDataAccess.git`
 
 ## Pre-requisite
 The pre-requisite for using the NOMIS class is that you'll need to register for NOMIS and find your API key (www.nomisweb.co.uk) in 
