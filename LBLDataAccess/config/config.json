@@ -1,1 +1,1 @@
-{"nomis_api_key": "0x1a8f5781f21ecb8b68b66b495c53ed0d1f635d26", "proxies": {"http": "http://LBLSquidProxy.lblmain.lewisham.gov.uk:8080", "https": "http://LBLSquidProxy.lblmain.lewisham.gov.uk:8080"}}
+{"nomis_api_key": "", "proxies": {"http": "", "https": ""}}
