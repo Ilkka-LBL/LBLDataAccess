@@ -24,7 +24,8 @@ Navigate to your project folder and import this Github repo:
 
 ## Pre-requisite
 The pre-requisite for using the NOMIS class is that you'll need to register for NOMIS and find your API key (www.nomisweb.co.uk) in 
-settings. Copy the key into a file named 'NOMIS_KEY_API.txt' located in the /api/ folder. 
+settings. Copy the key into a file named `config.json` located in the config folder inside LBLDataAccess. Make sure to insert the key inside
+double quotes after `"nomis_api_key":`. Likewise, if you need proxies, you can insert that information inside the `config.json` file too.
 
 
 ### Getting help selecting geocodes:
@@ -32,7 +33,7 @@ To get help with selecting geocodes, you must first import GeoHelper
 
 
 ```
-from LBLNomis.load_geocodes import GeoHelper
+from LBLDataAccess.load_geocodes import GeoHelper
 
 geo_help = Geohelper()
 ```
@@ -79,7 +80,7 @@ Please note that you need to select the starting and the ending columns from the
 ## Selecting the geocodes
 Now that you have decided what transformation you want, you're ready to use the `SmartGeocodeLookup` class. To import this class:
 
-`from load_geocodes import SmartGeocodeLookup`
+`from LBLDataAccess.load_geocodes import SmartGeocodeLookup`
 
 `SmartGeocodeLookup` class first finds common columns between tables, and then uses graph theory to find the shortest path between all 
 columns, regardless of whether they are in the same or different tables. This class is particularly helpful when the path between columns 
@@ -111,7 +112,7 @@ print(gss.get_filtered_geocodes())
 Once you have the geocodes, you can use them to download census data using the NOMIS API. To do so, you need to import the class for 
 downloading data from NOMIS:
 
-`from LBLNomis.access_nomis import DownloadFromNomis`
+`from LBLDataAccess.access_nomis import DownloadFromNomis`
 
 To use this class, you need to create an object and call the `connect()` method:
 
@@ -201,7 +202,7 @@ argument used for specifying whether you want a pandas dataframe or a downlaoded
 To use `get_bulk()`, you type:
 
 ```
-from LBLNomis.access_nomis import DownloadFromNomis
+from LBLDataAccess.access_nomis import DownloadFromNomis
 
 conn = DownloadFromNomis()
 conn.connect()
@@ -221,7 +222,7 @@ conn.get_bulk(dataset=dataset, data_format='csv', save_location=save_location)  
 To use `table_to_pandas()` to download data for Lewisham:
 
 ```
-from LBLNomis.access_nomis import DownloadFromNomis
+from LBLDataAccess.access_nomis import DownloadFromNomis
 
 conn = DownloadFromNomis()
 conn.connect()
@@ -240,7 +241,7 @@ df = conn.table_to_pandas(dataset=dataset, qualifiers=qualifiers, table_columns=
 
 To save this information, you can use `table_to_csv()`:
 ```
-from LBLNomis.access_nomis import DownloadFromNomis
+from LBLDataAccess.access_nomis import DownloadFromNomis
 
 conn = DownloadFromNomis()
 conn.connect()
@@ -268,8 +269,8 @@ From nomisweb.co.uk we can say that we want data from the table TS075 - Multi re
 
 First, we import our classes:
 ```
-from LBLNomis.load_geocodes import GeoHelper, SmartGeocodeLookup
-from LBLNomis.access_nomis import DownloadFromNomis
+from LBLDataAccess.load_geocodes import GeoHelper, SmartGeocodeLookup
+from LBLDataAccess.access_nomis import DownloadFromNomis
 ```
 Then we want to have a look at what geographies are available
 ```
@@ -369,8 +370,8 @@ another format, but we won't be showing an example of that here.
 ## The complete example:
 
 ```
-from LBLNomis.load_geocodes import GeoHelper, SmartGeocodeLookup
-from LBLNomis.access_nomis import DownloadFromNomis
+from LBLDataAccess.load_geocodes import GeoHelper, SmartGeocodeLookup
+from LBLDataAccess.access_nomis import DownloadFromNomis
 import pandas as pd
 
 pd.set_option('display.max_columns', None)

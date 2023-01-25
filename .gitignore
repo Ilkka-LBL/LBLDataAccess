@@ -151,4 +151,8 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-/api
+
+/Case studies
+/database_structure
+/powerbi_draft_relationships
+/TestFolder

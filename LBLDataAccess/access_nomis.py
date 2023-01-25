@@ -16,28 +16,25 @@ understand
 """
 
 from pathlib import Path
-import requests
+from requests import get as requestget
 from dataclasses import dataclass
-from typing import List, Tuple, Dict, Any
-import shutil
+from typing import List, Dict, Any
+from shutil import copyfileobj
 import pandas as pd
+from pkg_resources import resource_stream
+import json
 
 class LBLToNomis:
     """Get NOMIS data using LBL proxies."""
     
-    def __init__(self, api_key_location: str = None):
+    def __init__(self):
         """Initialize LBLToNomis."""
         # if api_key_location is not provided, see if NOMIS_KEY_API.txt exists
-        if api_key_location is None:
-            this_file = Path(__file__).parent.resolve()
-            api_key_location = this_file.joinpath("../api/NOMIS_KEY_API.txt")
         
-        assert api_key_location.exists(), f"NOMIS_KEY_API.txt not found in {api_key_location}"
+        self.config = json.load(resource_stream('LBLDataAccess', 'config/config.json'))
+        api_key = self.config['nomis_api_key'].strip()
+        assert api_key is not None, "NOMIS api key not found in config/config.json"
         
-        # let's open the file and read the first line
-        with api_key_location.open() as f:
-            api_key = f.readline()
-            api_key = api_key.strip()
         self.uid = f"?uid={api_key}"  # this comes at the end of each call
         
         self.base_url = "http://www.nomisweb.co.uk/api/v01/dataset/"
@@ -67,7 +64,7 @@ class LBLToNomis:
             table_url = self.base_url+dataset+'.data.csv?'
             if qualifiers:
                 for keyword, qualifier_codes in qualifiers.items():
-                    print(keyword, qualifier_codes)
+                    #print(keyword, qualifier_codes)
                     # each qualifier should consist of one understandable word and a list of codes. 
                     # E.g. keyword = 'geography', qualifier_codes = ['E09000023'] to get data for Lewisham.
                     # if the second part of the qualifier tuple is a list, however, we can make a custom call:
@@ -102,11 +99,12 @@ class LBLToNomis:
             self.url_creator()
             
         # proxy address
-        addrs = 'http://LBLSquidProxy.lblmain.lewisham.gov.uk:8080'
-        self.proxies = {'http': addrs, 'https': addrs}
+        http_addrs = self.config['proxies']['http']
+        https_addrs = self.config['proxies']['https']
+        self.proxies = {'http': http_addrs, 'https': https_addrs}
         
         # make the get call with proxies
-        self.r = requests.get(self.url, proxies=self.proxies)
+        self.r = requestget(self.url, proxies=self.proxies)
         
         if str(self.r) == '<Response [200]>':
             print("Connection okay")
@@ -175,9 +173,7 @@ class LBLToNomis:
     def _unpack_geography_list(self, geographies: List[str]) -> str:
         """Unpack a list of GSS codes, find the edges and format for URL."""
         sorted_geo = sorted(geographies)
-        print(len(sorted_geo))
         edited_geo = [int(i[1:]) for i in sorted_geo] 
-        print(edited_geo[0])
         edges_list = self._geography_edges(edited_geo)
         list_to_concat = []
         for edge in edges_list:
@@ -243,9 +239,9 @@ class DownloadFromNomis(LBLToNomis):
             
         file_name = Path(save_location).joinpath(file_name)
         
-        with requests.get(self.url, proxies=self.proxies, stream=True) as r:
+        with requestget(self.url, proxies=self.proxies, stream=True) as r:
             with open(file_name, 'wb') as f:
-                shutil.copyfileobj(r.raw, f)
+                copyfileobj(r.raw, f)
     
     def get_bulk(self, dataset: str = None, data_format: str = 'pandas', save_location: str = '../nomis_download/'):
         """Download bulk data as csv or as Pandas dataframe."""
@@ -258,12 +254,12 @@ class DownloadFromNomis(LBLToNomis):
                 
             file_name = Path(save_location).joinpath(file_name)
             
-            with requests.get(self.url, proxies=self.proxies, stream=True) as r:
+            with requestget(self.url, proxies=self.proxies, stream=True) as r:
                 with open(file_name, 'wb') as f:
-                    shutil.copyfileobj(r.raw, f)
+                    copyfileobj(r.raw, f)
                     
         elif data_format == 'pandas' or data_format == 'df':
-            with requests.get(self.url, proxies=self.proxies, stream=True) as r:
+            with requestget(self.url, proxies=self.proxies, stream=True) as r:
                 raw_text = pd.read_csv(r.raw)
             return raw_text
     
@@ -293,7 +289,7 @@ class DownloadFromNomis(LBLToNomis):
         elif value_or_percent == 'value':
             qualifiers['measures'] = [20100]
         self.url_creator(dataset, qualifiers, table_columns, for_download=True)
-        with requests.get(self.url, proxies=self.proxies, stream=True) as r:
+        with requestget(self.url, proxies=self.proxies, stream=True) as r:
             raw_text = pd.read_csv(r.raw)
         return raw_text
     

@@ -77,16 +77,15 @@ class SmartGeocodeLookup:
     """
     
     def __init__(self, starting_column: str = None, ending_column: str = None, local_authorities: List = None, 
-                 lookups_location: str = "../lookups/", lookup_table_cache: str = 'json_data.json'):
+                 lookups_location: str = "lookups", lookup_table_cache: str = 'json_data.json'):
         """Initialise SmartGeocodeLookup."""
+        _file_path = Path(__file__).resolve().parent
         self.starting_column = starting_column                              # start point in the path search
         self.ending_column = ending_column                                  # end point in the path search
         self.local_authorities = local_authorities                          # list of local authorities to get the geocodes for
-        self.lookups = Path(lookups_location)                               # where lookup tables are located
+        self.lookups = _file_path.joinpath(lookups_location)                # where lookup tables are located
         self.json_file_name = lookup_table_cache                            # where to save the lookup table info
-        
-        
-        
+                
         # hard code the local authorities columns, but keep in init to allow additions later        
         self._la_possibilities = ['LAD', 'UTLA', 'LTLA']                    # local authority column names - these are hidden, but available
         
