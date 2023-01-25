@@ -280,7 +280,7 @@ class SmartGeocodeLookup:
         first_table.columns = first_table_columns
 
         for table_to_join in self.shortest_path[1:]:
-            second_table = pd.read_csv(directory_locations[table_to_join[0]])
+            second_table = self.open_table_as_pandas(directory_locations[table_to_join[0]])
             second_table_columns = [col.upper() for col in list(second_table.columns)]
             second_table.columns = second_table_columns
 
