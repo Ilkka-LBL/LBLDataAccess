@@ -128,7 +128,7 @@ class SmartGeocodeLookup:
                 return df
                 
         elif extension == '.xlsx':
-            df = pd.read_excel(file_path_object, sheet_name=0, low_memory=False)
+            df = pd.read_excel(file_path_object, sheet_name=0)
             return df
     
     
