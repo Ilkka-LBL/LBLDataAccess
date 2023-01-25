@@ -88,9 +88,11 @@ requires more than one join operation. As the original reason for creating this 
 also need to provide a list of local authorities. As an example, let's say we want to get the 2022 GSS codes for Lewisham at Ward level, 
 we'd use:
 
-`gss = SmartGeocodeLookup(starting_column='LAD22CD', ending_column='WD22CD', local_authorities=['Lewisham'])
+```
+gss = SmartGeocodeLookup(starting_column='LAD22CD', ending_column='WD22CD', local_authorities=['Lewisham'])
 
-print(gss.get_filtered_geocodes())`
+print(gss.get_filtered_geocodes())
+```
 
 This returns a Pandas dataframe containing all Wards for Lewisham as at 2022. Note that Pandas dataframe consists of other columns too, so 
 you may need to apply further filters. If you want to know the path (i.e. list of tables that were joined), use:
