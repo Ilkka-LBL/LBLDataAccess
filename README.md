@@ -55,11 +55,23 @@ conn.update_config(api_key=api_key, proxies=proxies)
 ```
 
 Furthermore, if tracking the proxies and the API key becomes a burden, you can also reset these config settings with the `reset_config()` 
-method, which deletes the `config.json` file in the `config` folder:
+method, which deletes the `config.json` file in the `config` folder as well as removes the `api_key` and `proxies` class attributes:
 
-`conn.reset_config()`
+```
+conn.reset_config()
+print(conn.api_key)
+```
+The above will output an error:
 
-You can always print the stored api_key and proxies with:
+```
+AttributeError: 'DownloadFromNomis' object has no attribute 'api_key'
+```
+
+If you haven't removed the configurations, you can always print the stored api_key and proxies with:
+
+```
+print(conn.api_key, conn.proxies)
+```
 
 
 ### Getting help selecting geocodes:
