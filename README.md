@@ -21,59 +21,6 @@ To install this package:
 `python -m pip install git+https://github.com/Ilkka-LBL/LBLDataAccess.git`
 
 
-## Configuring NOMIS
-The pre-requisite for using the NOMIS class is that you'll need to register for NOMIS and find your API key (www.nomisweb.co.uk) in 
-settings. When you first use the `DownloadFromNomis` class, you should set the `api_key` and `proxies` arguments. If you want, you can
-additionally set `memorize=True`, which will save these variables in the `config.json` file in the `config` folder. The proxies argument has
-to be set as a dictionary `proxies = {'http': your_http_proxy, 'https': your_https_proxy}`. For example:
-
-```
-from LBLDataAccess.access_nomis import DownloadFromNomis
-
-api_key = 'examplestringthatcouldbeanything'
-proxies = {'http': your_http_proxy, 'https': your_https_proxy}
-
-conn = DownloadFromNomis(api_key=api_key, proxies=proxies, memorize=True)
-conn.connect()
-```
-
-If you need to change the API key and proxies that are stored in the `config.json` file, you can use the `update_config()` method:
-
-```
-from LBLDataAccess.access_nomis import DownloadFromNomis
-
-api_key = 'example_api_string'
-proxies = {'http': your_http_proxy, 'https': your_https_proxy}
-
-conn = DownloadFromNomis(api_key=api_key, proxies=proxies, memorize=True)
-conn.connect()
-
-api_key = 'new_api_string'
-proxies = {'http': your_new_http_proxy, 'https': your_new_https_proxy}
-
-conn.update_config(api_key=api_key, proxies=proxies)
-```
-
-Furthermore, if tracking the proxies and the API key becomes a burden, you can also reset these config settings with the `reset_config()` 
-method, which deletes the `config.json` file in the `config` folder as well as removes the `api_key` and `proxies` class attributes:
-
-```
-conn.reset_config()
-print(conn.api_key)
-```
-The above will output an error:
-
-```
-AttributeError: 'DownloadFromNomis' object has no attribute 'api_key'
-```
-
-If you haven't removed the configurations, you can always print the stored api_key and proxies with:
-
-```
-print(conn.api_key, conn.proxies)
-```
-
-
 ### Getting help selecting geocodes:
 To get help with selecting geocodes, you must first import GeoHelper
 
@@ -156,6 +103,60 @@ print(gss.get_filtered_geocodes())
 ---
 # Using Geocodes with NOMIS
 
+## Configuring NOMIS
+The pre-requisite for using the NOMIS class is that you'll need to register for NOMIS and find your API key (www.nomisweb.co.uk) in 
+settings. When you first use the `DownloadFromNomis` class, you should set the `api_key` and `proxies` arguments. If you want, you can
+additionally set `memorize=True`, which will save these variables in the `config.json` file in the `config` folder. The proxies argument has
+to be set as a dictionary `proxies = {'http': your_http_proxy, 'https': your_https_proxy}`. For example:
+
+```
+from LBLDataAccess.access_nomis import DownloadFromNomis
+
+api_key = 'examplestringthatcouldbeanything'
+proxies = {'http': your_http_proxy, 'https': your_https_proxy}
+
+conn = DownloadFromNomis(api_key=api_key, proxies=proxies, memorize=True)
+conn.connect()
+```
+
+If you need to change the API key and proxies that are stored in the `config.json` file, you can use the `update_config()` method:
+
+```
+from LBLDataAccess.access_nomis import DownloadFromNomis
+
+api_key = 'example_api_string'
+proxies = {'http': your_http_proxy, 'https': your_https_proxy}
+
+conn = DownloadFromNomis(api_key=api_key, proxies=proxies, memorize=True)
+conn.connect()
+
+api_key = 'new_api_string'
+proxies = {'http': your_new_http_proxy, 'https': your_new_https_proxy}
+
+conn.update_config(api_key=api_key, proxies=proxies)
+```
+
+Furthermore, if tracking the proxies and the API key becomes a burden, you can also reset these config settings with the `reset_config()` 
+method, which deletes the `config.json` file in the `config` folder as well as removes the `api_key` and `proxies` class attributes:
+
+```
+conn.reset_config()
+print(conn.api_key)
+```
+The above will output an error:
+
+```
+AttributeError: 'DownloadFromNomis' object has no attribute 'api_key'
+```
+
+If you haven't removed the configurations, you can always print the stored api_key and proxies with:
+
+```
+print(conn.api_key, conn.proxies)
+```
+
+
+
 ## Get table info from NOMIS
 Once you have the geocodes, you can use them to download census data using the NOMIS API. To do so, you need to import the class for 
 downloading data from NOMIS:
@@ -168,13 +169,7 @@ To use this class, you need to create an object and call the `connect()` method:
 conn = DownloadFromNomis()
 conn.connect()
 ```
-
-If the connection does not print 'Connection okay', you may need to define the full path to your API key. Do so by typing:
-
-```
-conn = DownloadFromNomis(api_key_location='full/path/to/api/key.txt')
-conn.connect()
-```
+Note that here we assume that you have set up your `api_key` and `proxies` previously, saving them with the `memorize` argument.
 
 Now that you have created a connection, you can print a list of all available tables from NOMIS:
 
@@ -369,10 +364,16 @@ When we print `oa_geocodes`, we get the pandas dataframe:
 [1619 rows x 6 columns]
 ```
 
-Okay, great, we have the necessary geocodes. Now let's get the NOMIS data as a pandas dataframe too:
+Okay, great, we have the necessary geocodes. Now let's get the NOMIS data as a pandas dataframe too. Before, though, we need to set the API
+key and possibly also the proxies:
 
 ```
-conn = DownloadFromNomis()
+api_key = 'change_me'  # needs to be changed!!
+proxies = {'http': 'change_me', 'https': 'change_me'}  # optional, but can be beneficial
+```
+And let's connect:
+```
+conn = DownloadFromNomis(api_key=api_key, proxies=proxies, memorize=True)  # setting memorize=True stores your API key and proxies for future use
 conn.connect()
 
 conn.print_table_info()
@@ -435,8 +436,9 @@ gss = SmartGeocodeLookup(starting_column=start_column, ending_column=end_column,
 oa_geocodes = gss.get_filtered_geocodes()
 
 print(oa_geocodes)
-
-conn = DownloadFromNomis()
+api_key = 'change_me'  # needs to be changed!!
+proxies = {'http': 'change_me', 'https': 'change_me'}  # optional, but can be beneficial
+conn = DownloadFromNomis(api_key=api_key, proxies=proxies, memorize=True)  # setting memorize=True stores your API key and proxies for future use
 conn.connect()
 
 conn.print_table_info()

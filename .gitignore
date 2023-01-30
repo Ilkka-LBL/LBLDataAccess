@@ -156,3 +156,8 @@ cython_debug/
 /database_structure
 /powerbi_draft_relationships
 /TestFolder
+/lookups
+/config
+/LBLDataAccess/lookups/*.json
+/LBLDataAccess/config/*.json
+
