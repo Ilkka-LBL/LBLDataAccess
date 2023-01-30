@@ -3,14 +3,16 @@ Created on Wed Dec 14 10:50:56 2022.
 
 @author: ISipila
 
-Get a NOMIS api key by registering with NOMIS. 
-Copy the api key (and nothing else) to a text file and name it 
-NOMIS_KEY_API.txt. Place this text file in /api/ directory. Alternatively, 
-provide the absolute path to the text file when creating a new LBLToNomis 
-object.
+Get a NOMIS api key by registering with NOMIS. When initialising the DownloadFromNomis class, provide the api key as a parameter to the 
+api_key argument. If you need proxies to access the data, provide the information as a dictionary to proxies. There is also a convenience 
+argument to memorize these settings for later. For example:
+    
+    api_key = '02bdlfsjkd3idk32j3jeaasd2'                                # this is an example of random string from NOMIS website
+    proxies = {'http': your_proxy_address, 'https': your_proxy_address}  # proxy dictionary must follow this pattern. If you only have http
+                                                                         # proxy, copy it to the https without changing it
 
-There are two steps to downloading data from NOMIS. First, you need to 
-understand 
+    connect_to_nomis = DownloadFromNomis(api_key=api_key, proxies=proxies, memorize=True)
+    connect_to_nomis.connect()
 
 
 """
@@ -23,24 +25,90 @@ from shutil import copyfileobj
 import pandas as pd
 from pkg_resources import resource_stream
 import json
+from sys import exit
 
 class LBLToNomis:
-    """Get NOMIS data using LBL proxies."""
+    """Get NOMIS data."""
     
-    def __init__(self):
+    def __init__(self, api_key: str = None, proxies: str = None, memorize: bool = False):
         """Initialize LBLToNomis."""
-        # if api_key_location is not provided, see if NOMIS_KEY_API.txt exists
+        # if api_key is not provided, see if config file exists. If it doesn't, and memorize is set to true, create a config file.
         
-        self.config = json.load(resource_stream('LBLDataAccess', 'config/config.json'))
-        api_key = self.config['nomis_api_key'].strip()
-        assert api_key is not None, "NOMIS api key not found in config/config.json"
-        
-        self.uid = f"?uid={api_key}"  # this comes at the end of each call
+        try:
+            self.config = json.load(resource_stream('LBLDataAccess', 'config/config.json'))
+            self.api_key = self.config['nomis_api_key'].strip()
+            assert self.api_key, "NOMIS api key not found in config/config.json - try setting it with the api_key argument and set memorize = True to store the key for later."
+        except FileNotFoundError:
+            if memorize:
+                self._write_config_file(api_key=api_key, proxies=proxies)
+                self.config = json.load(resource_stream('LBLDataAccess', 'config/config.json'))
+                self.api_key = self.config['nomis_api_key'].strip()
+            else:
+                assert api_key, "NOMIS api key not set - try setting it with the api_key argument. You can also set memorize = True to store the key for later."
+                self.api_key = str(api_key).strip()
+                self.config = {'nomis_api_key': self.api_key, 'proxies': proxies}
+                
+        self.uid = f"?uid={self.api_key}"  # this comes at the end of each call
         
         self.base_url = "http://www.nomisweb.co.uk/api/v01/dataset/"
         self.url = None  # initialize self.url
         
     
+    def reset_config(self):
+        """Delete the configuration file and related information."""
+        parent_path = Path(__file__).resolve().parent
+        config_file_path = parent_path.joinpath('config/config.json')
+        config_file_path.unlink()
+        del self.api_key
+        del self.proxies
+    
+    def update_config(self, api_key: str = None, proxies: Dict = None):
+        """Update configuration file using the given api key and/or proxies."""
+        if api_key:
+            self.api_key = api_key
+        new_proxies = {}
+        for protocol, address in proxies.items():
+            if address:
+                new_proxies[protocol] = address
+        self.proxies=new_proxies
+        self._write_config_file(api_key=self.api_key, proxies=self.proxies)
+        
+    def _write_config_file(self, api_key: str = None, proxies: Dict = None):
+        """Write configuration file given api key and/or proxies."""
+        parent_path = Path(__file__).resolve().parent
+        config_file_path = parent_path.joinpath('config/config.json')
+        
+        if config_file_path.is_file():
+            with open(config_file_path) as json_data:
+                config_file = json.load(json_data)
+            json_data.close()
+            
+        else:
+            config_file = {}
+            if not parent_path.joinpath('config').is_dir():
+                parent_path.joinpath('config').mkdir()
+            config_file_path.touch()
+        
+        if api_key:
+            config_file['nomis_api_key'] = str(api_key).strip()
+        else:
+            print('No API key provided nor was one found in the config file. Please provide an API key string.')
+            exit()
+        if proxies:
+            proxy_formatting = "\nproxies = {'https': 'your_https_proxy', 'http': 'your_http_proxy'}"
+            assert isinstance(proxies, dict), f"Proxies need to be given as a dictionary: {proxy_formatting}"
+
+            try:
+                http_proxy = proxies['http']
+                https_proxy = proxies['https']
+                config_file['proxies'] = {'http': http_proxy, 'https': https_proxy}
+
+            except KeyError:
+                print(f"Wrong format of proxy dictionary. The correct format is: {proxy_formatting}")
+
+        with open(config_file_path, 'w') as f:                
+            json.dump(config_file, f, sort_keys=True, indent=4, ensure_ascii=False)
+        
     def bulk_download(self, dataset: str = None):
         """Create a URL string for bulk download."""
         table_url = self.base_url+dataset+'.bulk.csv?'
@@ -98,16 +166,27 @@ class LBLToNomis:
         if url is None: 
             self.url_creator()
             
-        # proxy address
-        http_addrs = self.config['proxies']['http']
-        https_addrs = self.config['proxies']['https']
-        self.proxies = {'http': http_addrs, 'https': https_addrs}
-        
-        # make the get call with proxies
-        self.r = requestget(self.url, proxies=self.proxies)
+        # if proxies haven't been manually set, but there is a config file, try finding proxies in the config file. If not there, try 
+        # connecting to NOMIS without the proxies. If this fails, prompt the user to add proxies.
+
+        try:
+            if self.config['proxies']:
+                self.proxies = self.config['proxies']
+                # make the get call with proxies
+                self.r = requestget(self.url, proxies=self.proxies)
+            else:
+                print(f"Proxies not set, attempting to connect without proxies")
+                # make the get call with proxies
+                self.r = requestget(self.url)
+        except KeyError as e:
+            print(f"{e} - proxies not set, attempting to connect without proxies")
+            # make the get call with proxies
+            self.r = requestget(self.url)
         
         if str(self.r) == '<Response [200]>':
             print("Connection okay")
+        else:
+            print('Could not connect to NOMIS. Have you set your proxies?')
         
     def get_all_tables(self) -> List[Any]:
         """Get all available tables."""
@@ -199,9 +278,9 @@ class LBLToNomis:
 class DownloadFromNomis(LBLToNomis):
     """Subclass for downloading data."""
     
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """Initialize DownloadFromNomis."""
-        super().__init__()
+        super().__init__(*args, **kwargs)
     
     def table_to_csv(self,
                           dataset: str = None,

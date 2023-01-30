@@ -20,10 +20,46 @@ class the speed will be back to normal.
 To install this package:
 `python -m pip install git+https://github.com/Ilkka-LBL/LBLDataAccess.git`
 
-## Pre-requisite
+
+## Configuring NOMIS
 The pre-requisite for using the NOMIS class is that you'll need to register for NOMIS and find your API key (www.nomisweb.co.uk) in 
-settings. Copy the key into a file named `config.json` located in the config folder inside LBLDataAccess. Make sure to insert the key inside
-double quotes after `"nomis_api_key":`. Likewise, if you need proxies, you can insert that information inside the `config.json` file too.
+settings. When you first use the `DownloadFromNomis` class, you should set the `api_key` and `proxies` arguments. If you want, you can
+additionally set `memorize=True`, which will save these variables in the `config.json` file in the `config` folder. The proxies argument has
+to be set as a dictionary `proxies = {'http': your_http_proxy, 'https': your_https_proxy}`. For example:
+
+```
+from LBLDataAccess.access_nomis import DownloadFromNomis
+
+api_key = 'examplestringthatcouldbeanything'
+proxies = {'http': your_http_proxy, 'https': your_https_proxy}
+
+conn = DownloadFromNomis(api_key=api_key, proxies=proxies, memorize=True)
+conn.connect()
+```
+
+If you need to change the API key and proxies that are stored in the `config.json` file, you can use the `update_config()` method:
+
+```
+from LBLDataAccess.access_nomis import DownloadFromNomis
+
+api_key = 'example_api_string'
+proxies = {'http': your_http_proxy, 'https': your_https_proxy}
+
+conn = DownloadFromNomis(api_key=api_key, proxies=proxies, memorize=True)
+conn.connect()
+
+api_key = 'new_api_string'
+proxies = {'http': your_new_http_proxy, 'https': your_new_https_proxy}
+
+conn.update_config(api_key=api_key, proxies=proxies)
+```
+
+Furthermore, if tracking the proxies and the API key becomes a burden, you can also reset these config settings with the `reset_config()` 
+method, which deletes the `config.json` file in the `config` folder:
+
+`conn.reset_config()`
+
+You can always print the stored api_key and proxies with:
 
 
 ### Getting help selecting geocodes:
@@ -402,3 +438,7 @@ df = conn.table_to_pandas(dataset=dataset, qualifiers=qualifiers, value_or_perce
 
 print(df.head(20))
 ```
+
+
+
+

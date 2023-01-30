@@ -17,6 +17,8 @@ def package_files(directory):
     return paths
 
 extra_files = package_files('LBLDataAccess/lookups')
+config = package_files('LBLDataAccess/config')
+all_files = extra_files + config
 
 setup(
     name='LBLDataAccess',
@@ -24,7 +26,7 @@ setup(
     author='Ilkka Sipila',
     author_email='ilkka.sipila@lewisham.gov.uk',
     packages=find_packages(include=['LBLDataAccess', 'LBLDataAccess.*']),
-    package_data={'LBLDataAccess': extra_files},
+    package_data={'LBLDataAccess': all_files},
     install_requires=[
         'requests',
         'pandas',
