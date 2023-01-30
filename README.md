@@ -148,14 +148,15 @@ The above will output an error:
 ```
 AttributeError: 'DownloadFromNomis' object has no attribute 'api_key'
 ```
-
 If you haven't removed the configurations, you can always print the stored api_key and proxies with:
 
 ```
 print(conn.api_key, conn.proxies)
 ```
 
-
+However, note also that even after calling the `conn.reset_config()` method, you can still use the `conn.connect()` as the API key has been
+stored as part of the URL call. This also means that you can still download data from NOMIS too. If this is not desired, you should delete
+the `DownloadFromNomis()` object. 
 
 ## Get table info from NOMIS
 Once you have the geocodes, you can use them to download census data using the NOMIS API. To do so, you need to import the class for 
