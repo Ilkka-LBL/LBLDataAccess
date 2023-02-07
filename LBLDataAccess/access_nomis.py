@@ -317,11 +317,11 @@ class DownloadFromNomis(LBLToNomis):
             Path(save_location).mkdir(parents=True, exist_ok=True)
             
         file_name = Path(save_location).joinpath(file_name)
-        if self.proxies:
+        try:
             with requestget(self.url, proxies=self.proxies, stream=True) as r:
                 with open(file_name, 'wb') as f:
                     copyfileobj(r.raw, f)
-        else:
+        except AttributeError:
             with requestget(self.url, stream=True) as r:
                 with open(file_name, 'wb') as f:
                     copyfileobj(r.raw, f)
@@ -337,21 +337,21 @@ class DownloadFromNomis(LBLToNomis):
                 Path(save_location).mkdir(parents=True, exist_ok=True)
                 
             file_name = Path(save_location).joinpath(file_name)
-            if self.proxies:
+            try:
                 with requestget(self.url, proxies=self.proxies, stream=True) as r:
                     with open(file_name, 'wb') as f:
                         copyfileobj(r.raw, f)
-            else:
+            except AttributeError:
                 with requestget(self.url, stream=True) as r:
                     with open(file_name, 'wb') as f:
                         copyfileobj(r.raw, f)
                 
         elif data_format == 'pandas' or data_format == 'df':
-            if self.proxies:
+            try::
                 with requestget(self.url, proxies=self.proxies, stream=True) as r:
                     raw_text = pd.read_csv(r.raw)
                 return raw_text
-            else:
+            except AttributeError:
                 with requestget(self.url, stream=True) as r:
                     raw_text = pd.read_csv(r.raw)
                 return raw_text
@@ -382,11 +382,11 @@ class DownloadFromNomis(LBLToNomis):
         elif value_or_percent == 'value':
             qualifiers['measures'] = [20100]
         self.url_creator(dataset, qualifiers, table_columns, for_download=True)
-        if self.proxies:
+        try:
             with requestget(self.url, proxies=self.proxies, stream=True) as r:
                 raw_text = pd.read_csv(r.raw)
             return raw_text
-        else:
+        except AttributeError:
             with requestget(self.url, stream=True) as r:
                 raw_text = pd.read_csv(r.raw)
             return raw_text
