@@ -347,7 +347,7 @@ class DownloadFromNomis(LBLToNomis):
                         copyfileobj(r.raw, f)
                 
         elif data_format == 'pandas' or data_format == 'df':
-            try::
+            try:
                 with requestget(self.url, proxies=self.proxies, stream=True) as r:
                     raw_text = pd.read_csv(r.raw)
                 return raw_text
