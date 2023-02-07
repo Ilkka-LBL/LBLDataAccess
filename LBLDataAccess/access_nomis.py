@@ -317,10 +317,15 @@ class DownloadFromNomis(LBLToNomis):
             Path(save_location).mkdir(parents=True, exist_ok=True)
             
         file_name = Path(save_location).joinpath(file_name)
-        
-        with requestget(self.url, proxies=self.proxies, stream=True) as r:
-            with open(file_name, 'wb') as f:
-                copyfileobj(r.raw, f)
+        if self.proxies:
+            with requestget(self.url, proxies=self.proxies, stream=True) as r:
+                with open(file_name, 'wb') as f:
+                    copyfileobj(r.raw, f)
+        else:
+            with requestget(self.url, stream=True) as r:
+                with open(file_name, 'wb') as f:
+                    copyfileobj(r.raw, f)
+
     
     def get_bulk(self, dataset: str = None, data_format: str = 'pandas', save_location: str = '../nomis_download/'):
         """Download bulk data as csv or as Pandas dataframe."""
@@ -332,16 +337,25 @@ class DownloadFromNomis(LBLToNomis):
                 Path(save_location).mkdir(parents=True, exist_ok=True)
                 
             file_name = Path(save_location).joinpath(file_name)
-            
-            with requestget(self.url, proxies=self.proxies, stream=True) as r:
-                with open(file_name, 'wb') as f:
-                    copyfileobj(r.raw, f)
-                    
+            if self.proxies:
+                with requestget(self.url, proxies=self.proxies, stream=True) as r:
+                    with open(file_name, 'wb') as f:
+                        copyfileobj(r.raw, f)
+            else:
+                with requestget(self.url, stream=True) as r:
+                    with open(file_name, 'wb') as f:
+                        copyfileobj(r.raw, f)
+                
         elif data_format == 'pandas' or data_format == 'df':
-            with requestget(self.url, proxies=self.proxies, stream=True) as r:
-                raw_text = pd.read_csv(r.raw)
-            return raw_text
-    
+            if self.proxies:
+                with requestget(self.url, proxies=self.proxies, stream=True) as r:
+                    raw_text = pd.read_csv(r.raw)
+                return raw_text
+            else:
+                with requestget(self.url, stream=True) as r:
+                    raw_text = pd.read_csv(r.raw)
+                return raw_text
+
             
     def table_to_pandas(self,
                           dataset: str = None,
@@ -368,10 +382,15 @@ class DownloadFromNomis(LBLToNomis):
         elif value_or_percent == 'value':
             qualifiers['measures'] = [20100]
         self.url_creator(dataset, qualifiers, table_columns, for_download=True)
-        with requestget(self.url, proxies=self.proxies, stream=True) as r:
-            raw_text = pd.read_csv(r.raw)
-        return raw_text
-    
+        if self.proxies:
+            with requestget(self.url, proxies=self.proxies, stream=True) as r:
+                raw_text = pd.read_csv(r.raw)
+            return raw_text
+        else:
+            with requestget(self.url, stream=True) as r:
+                raw_text = pd.read_csv(r.raw)
+            return raw_text
+
     
 @dataclass
 class NomisTable:
