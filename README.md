@@ -20,6 +20,8 @@ class the speed will be back to normal.
 To install this package:
 `python -m pip install git+https://github.com/Ilkka-LBL/LBLDataAccess.git`
 
+If using Conda, you may need to just write:
+`pip install git+https://github.com/Ilkka-LBL/LBLDataAccess.git`
 
 ### Getting help selecting geocodes:
 To get help with selecting geocodes, you must first import GeoHelper
