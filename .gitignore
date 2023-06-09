@@ -161,3 +161,5 @@ cython_debug/
 /LBLDataAccess/lookups/*.json
 /LBLDataAccess/config/*.json
 
+settings.txt
+.settings.txt

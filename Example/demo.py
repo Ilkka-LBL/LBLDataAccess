@@ -16,7 +16,7 @@ To install LBLDataAccess:
     python -m pip install git+https://github.com/lb-lewisham/LBLDataAccess.git
 
 """
-
+#%%
 from LBLDataAccess.load_geocodes import GeoHelper, SmartGeocodeLookup
 from LBLDataAccess.access_nomis import DownloadFromNomis
 from pathlib import Path
