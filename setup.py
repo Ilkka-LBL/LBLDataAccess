@@ -22,7 +22,7 @@ all_files = extra_files + config
 
 setup(
     name='LBLDataAccess',
-    version='0.2.1',
+    version='0.2.2',
     author='Ilkka Sipila',
     author_email='ilkka.sipila@lewisham.gov.uk',
     packages=find_packages(include=['LBLDataAccess', 'LBLDataAccess.*']),

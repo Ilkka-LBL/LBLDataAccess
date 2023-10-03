@@ -34,7 +34,13 @@ nomis_api = settings['nomis_api_key']
 proxies = settings['proxies']  # ignore this when using on Google Colab or outside organisational proxy
 
 #%%
-print(proxies)
+#print(proxies)
+from LBLDataAccess.load_geocodes import SmartGeocodeLookup
+gss = SmartGeocodeLookup(starting_column='WD22CD', ending_column='LSOA21CD', local_authorities=['Lewisham'])
+
+geocodes = gss.get_filtered_geocodes()
+#%%
+geocodes
 #%% We want to have a look at what data we want from NOMIS. We do that by making an api call to nomis and open a connection:
     
 conn = DownloadFromNomis(api_key=nomis_api, proxies=proxies, memorize=True)  

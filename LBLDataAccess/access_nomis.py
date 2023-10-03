@@ -28,9 +28,13 @@ import json
 from sys import exit
 
 class LBLToNomis:
-    """Get NOMIS data."""
+    """ Get NOMIS data.
+        api_key: Nomis API key
+        proxies: http and https proxy addresses as a dictionary object {'http': http_addr, 'https': https_addr} - this is optional
+        memorize: set to True if you want to save API key and proxies in a plain text file.
+    """
     
-    def __init__(self, api_key: str = None, proxies: str = None, memorize: bool = False):
+    def __init__(self, api_key: str = None, proxies: Dict = None, memorize: bool = False):
         """Initialize LBLToNomis."""
         # if api_key is not provided, see if config file exists. If it doesn't, and memorize is set to true, create a config file.
         
@@ -244,8 +248,8 @@ class LBLToNomis:
     def _create_geography_e_code(self, val) -> str:
         """Create a nine character GSS code (e.g. Exxxxxxxx)."""
         present_len = len(str(val))
-        preset_num_diff = 8-present_len
-        zeroes = '0'*preset_num_diff 
+        present_num_diff = 8-present_len
+        zeroes = '0'*present_num_diff 
         present_code = f"E{zeroes}{val}"
         return present_code
     
