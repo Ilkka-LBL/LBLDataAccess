@@ -1,27 +1,28 @@
 # Combining NOMIS data and ONS Geoportal GSS codes
 ---
 ### Purpose
-The purpose of this Python package is to allow easier navigation of the NOMIS API and easier collection of GSS geocodes from ONS Open 
-Geography Portal. The GSS geocodes are necessary for selecting the right tables in the NOMIS API, which can otherwise be very difficult to 
-navigate.
+The purpose of this Python package is to allow easier navigation of the NOMIS API and easier collection of GSS geocodes from ONS Open Geography Portal. The GSS geocodes are necessary for selecting the right tables in the NOMIS API, which can otherwise be very difficult to navigate.
 
 ### The caveat
-The lookup tables do not contain all possible lookup tables that are available from ONS's Open Geography Portal. Instead, only a handful 
-of the most useful tables were downloaded. 
+The lookup tables do not contain all possible lookup tables that are available from ONS's Open Geography Portal. Instead, only a handful of the most useful tables were downloaded. 
 
-However, you can easily extend the list of lookup tables by placing a new .csv file in the appropriate folder under `/lookups/` after 
-downloading it from the ONS Open Geography Portal. You can even create a custom folder for any new lookup tables that span between years 
-(e.g. 2011 to 2016), but I recommend you stick with the folder naming pattern for your own sanity's sake. If you add more lookup tables, 
-remember to delete the `json_data.json` file in the `/lookups/` folder - this file will be recreated automatically when you next use the 
-SmartGeocodeLookup class and will slow the process down the first time, but once the json file has been recreated, the next time you use the
+However, you can easily extend the list of lookup tables by placing a new .csv file in the appropriate folder under `/lookups/` after downloading it from the ONS Open Geography Portal. You can even create a custom folder for any new lookup tables that span between years (e.g. 2011 to 2016), but I recommend you stick with the folder naming pattern for your own sanity's sake. If you add more lookup tables, remember to delete the `json_data.json` file in the `/lookups/` folder - this file will be recreated automatically the next time you use the SmartGeocodeLookup class and will slow the process down at first, but once the json file has been recreated, the next time you use the
 class the speed will be back to normal.
 
 ## Getting started
 To install this package:
 `python -m pip install git+https://github.com/Ilkka-LBL/LBLDataAccess.git`
 
+Or 
+
+`python -m pip install LBLDataAccess==0.2.2`
+
 If using Conda, you may need to just write:
 `pip install git+https://github.com/Ilkka-LBL/LBLDataAccess.git`
+
+or 
+
+`pip install LBLDataAccess==0.2.2`
 
 ### Getting help selecting geocodes:
 To get help with selecting geocodes, you must first import GeoHelper
@@ -38,18 +39,13 @@ First of all, we can check what tables are available:
 
 `all_available_tables = geo_help.files_and_folders`
 
-The result is a JSON-like dictionary output that the user can use to navigate the geocode tables. Call it the 'Advanced mode' if you like 
-and you can use this structure as a guide if you really want to do joins manually. This dictionary is organised like: 
+The result is a JSON-like dictionary output that the user can use to navigate the geocode tables. Call it the 'Advanced mode' if you like and you can use this structure as a guide if you really want to do joins manually. This dictionary is organised like: 
 
 `{year: file_name{'columns': list_of_columns, 'useful_columns': columns_that_end_in_CD}}`
 
-where year is the sub-folder in `lookups` folder, file_name is the .csv or .xlsx file in that sub-folder, `list_of_columns` is a list 
-containing all columns for that table, and `columns_that_end_in_CD` is the subset of all columns in the lookup table consisting of columns 
-that end in 'CD'.
+where year is the sub-folder in `lookups` folder, file_name is the .csv or .xlsx file in that sub-folder, `list_of_columns` is a list containing all columns for that table, and `columns_that_end_in_CD` is the subset of all columns in the lookup table consisting of columns that end in 'CD'.
 
-A more user-friendly option over the 'Advanced mode' is to explore the available geographical regions. You can do this by first printing the
-available 'years' sub-folders, from which you can select the sub-folder that interests you and use it as an input to an additional helper
-method:
+A more user-friendly option over the 'Advanced mode' is to explore the available geographical regions. You can do this by first printing the available 'years' sub-folders, from which you can select the sub-folder that interests you and use it as an input to an additional helper method:
 
 ```
 years = geo_help.year_options  
@@ -57,8 +53,7 @@ for year in years:
     print(geo_help.available_geographies(year=year))
 ```
 
-If you added a custom folder with your own .csv files and deleted the old JSON file, these will also show up with the above command. If you
-want the available geographies for all tables, simply write:
+If you added a custom folder with your own .csv files and deleted the old JSON file, these will also show up with the above command. If you want the available geographies for all tables, simply write:
 
 `print(geo_help.available_geographies())`
 
@@ -66,50 +61,45 @@ If you need an explanation for any of the codes output by the `available_geograp
 
 `print(geo_help.geography_keys())`
 
-which will print describe what the first few letters of the columns stand for. These descriptions aren't in-depth descriptions, but do 
-provide some context. To fully understand what each of these areas are supposed to measure, please refer to ONS' Open Geography Portal.  
+which will print describe what the first few letters of the columns stand for. These descriptions aren't in-depth descriptions, but do provide some context. To fully understand what each of these areas are supposed to measure, please refer to ONS' Open Geography Portal.  
 
-Please note that you need to select the starting and the ending columns from the list of available geographies that are printed using the 
-`available_geographies()` method.
+Please note that you need to select the starting and the ending columns from the list of available geographies that are printed using the `available_geographies()` method.
 
 ## Selecting the geocodes
 Now that you have decided what transformation you want, you're ready to use the `SmartGeocodeLookup` class. To import this class:
 
 `from LBLDataAccess.load_geocodes import SmartGeocodeLookup`
 
-`SmartGeocodeLookup` class first finds common columns between tables, and then uses graph theory to find the shortest path between all 
-columns, regardless of whether they are in the same or different tables. This class is particularly helpful when the path between columns 
-requires more than one join operation. As the original reason for creating this class was to find the geocodes for local authorities, we 
-also need to provide a list of local authorities. As an example, let's say we want to get the 2022 GSS codes for Lewisham at Ward level, 
-we'd use:
+`SmartGeocodeLookup` class first finds common columns between tables, and then uses graph theory to find the shortest path between all columns, regardless of whether they are in the same or different tables. This class is particularly helpful when the path between columns requires more than one join operation. As the original reason for creating this class was to find the geocodes for local authorities, we also need to provide a list of local authorities. As an example, let's say we want to get the 2022 GSS codes for Lewisham at Ward level, we'd use:
 
 ```
-gss = SmartGeocodeLookup(starting_column='LAD22CD', ending_column='WD22CD', local_authorities=['Lewisham'])
+gss = SmartGeocodeLookup(end_column_max_value_search=True, local_authority_constraint=True, verbose=True)
+# changing end_column_max_value_search to True gives different results from setting it False
+gss.run_graph(starting_column='LAD22CD', ending_column='WD22CD', local_authorities=['Lewisham'])
+# try changing WD22CD to WD21CD and WD23CD to see how this affects the results
 
-print(gss.get_filtered_geocodes())
+geocodes = gss.get_filtered_geocodes(1)  # the integer input here sets the number of possible routes returned.
+print(geocodes[0])
+
 ```
 
-This returns a Pandas dataframe containing all Wards for Lewisham as at 2022. Note that Pandas dataframe consists of other columns too, so 
-you may need to apply further filters. If you want to know the path (i.e. list of tables that were joined), use:
+This returns a Pandas dataframe containing all Wards for Lewisham as at 2022. Note that Pandas dataframe consists of other columns too, so you may need to apply further filters. If you want to know the path (i.e. list of tables that were joined), use:
 
-`print(gss.shortest_path)`
+`print(gss.shortest_paths)`
 
 As another example, to get 2021 census Output area GSS codes, we'd have to choose output area column for 2021:
   
 ```
-gss = SmartGeocodeLookup(starting_column='LAD22CD', ending_column='OA21CD', local_authorities=['Lewisham'])
+gss.run_graph(starting_column='LAD22CD', ending_column='OA21CD', local_authorities=['Lewisham'])
 
 print(gss.get_filtered_geocodes())
 ```
-
+Note that we haven't created a new SmartGeocodeLookup object, but rather are just building a new graph based on the data we already have.
 ---
 # Using Geocodes with NOMIS
 
 ## Configuring NOMIS
-The pre-requisite for using the NOMIS class is that you'll need to register for NOMIS and find your API key (www.nomisweb.co.uk) in 
-settings. When you first use the `DownloadFromNomis` class, you should set the `api_key` and `proxies` arguments. If you want, you can
-additionally set `memorize=True`, which will save these variables in the `config.json` file in the `config` folder. The proxies argument has
-to be set as a dictionary `proxies = {'http': your_http_proxy, 'https': your_https_proxy}`. For example:
+The pre-requisite for using the NOMIS class is that you'll need to register for NOMIS and find your API key (www.nomisweb.co.uk) in settings. When you first use the `DownloadFromNomis` class, you should set the `api_key` and `proxies` arguments. If you want, you can additionally set `memorize=True`, which will save these variables in the `config.json` file in the `config` folder. The proxies argument has to be set as a dictionary `proxies = {'http': your_http_proxy, 'https': your_https_proxy}`. For example:
 
 ```
 from LBLDataAccess.access_nomis import DownloadFromNomis
@@ -138,8 +128,7 @@ proxies = {'http': your_new_http_proxy, 'https': your_new_https_proxy}
 conn.update_config(api_key=api_key, proxies=proxies)
 ```
 
-Furthermore, if tracking the proxies and the API key becomes a burden, you can also reset these config settings with the `reset_config()` 
-method, which deletes the `config.json` file in the `config` folder as well as removes the `api_key` and `proxies` class attributes:
+Furthermore, if tracking the proxies and the API key becomes a burden, you can also reset these config settings with the `reset_config()` method, which deletes the `config.json` file in the `config` folder as well as removes the `api_key` and `proxies` class attributes:
 
 ```
 conn.reset_config()
@@ -156,13 +145,10 @@ If you haven't removed the configurations, you can always print the stored api_k
 print(conn.api_key, conn.proxies)
 ```
 
-However, note also that even after calling the `conn.reset_config()` method, you can still use the `conn.connect()` as the API key has been
-stored as part of the URL call. This also means that you can still download data from NOMIS too. If this is not desired, you should delete
-the `DownloadFromNomis()` object. 
+However, note also that even after calling the `conn.reset_config()` method, you can still use the `conn.connect()` as the API key has been stored as part of the URL call. This also means that you can still download data from NOMIS too. If this is not desired, you should delete the `DownloadFromNomis()` object. 
 
 ## Get table info from NOMIS
-Once you have the geocodes, you can use them to download census data using the NOMIS API. To do so, you need to import the class for 
-downloading data from NOMIS:
+Once you have the geocodes, you can use them to download census data using the NOMIS API. To do so, you need to import the class for downloading data from NOMIS:
 
 `from LBLDataAccess.access_nomis import DownloadFromNomis`
 
@@ -192,11 +178,7 @@ NM_2097_1 : TS075 - Multi religion households
 NM_2098_1 : TS076 - Welsh language skills (speaking) by single year of age
 ```
 
-Calling the above method prints two important details for every table (more than 1300 currently) available through the NOMIS API, separated 
-by a colon: 1) the code that you'll use when downloading a table or information therein through the API; and 2) the table name, including a 
-brief description of the data contained. To get more detailed information about a table, take the code string before the colon 
-(e.g. NM_2098_1 for the table TS076 - Welsh language skills (speaking) by single year of age) and use it as input to
-`detailed_info_for_table()` method:
+Calling the above method prints two important details for every table (more than 1300 currently) available through the NOMIS API, separated by a colon: 1) the code that you'll use when downloading a table or information therein through the API; and 2) the table name, including a brief description of the data contained. To get more detailed information about a table, take the code string before the colon (e.g. NM_2098_1 for the table TS076 - Welsh language skills (speaking) by single year of age) and use it as input to `detailed_info_for_table()` method:
 
 `conn.detailed_info_for_table(table_name='NM_2097_1')`
 
@@ -235,15 +217,7 @@ Column: FREQ, column code: CL_2097_1_FREQ
 
 ## Download data from NOMIS
 
-The `DownloadFromNomis` class gives you three main downloading methods: `table_to_csv()`, `table_to_pandas()`, and `get_bulk()`. The 
-difference between the first two methods is that the first one saves the downloaded data to a csv file, while `table_to_pandas()` returns a 
-pandas dataframe. The `get_bulk()` method takes an argument to specify whether you want to download the data as a csv or output a pandas 
-dataframe. While the `table_to_csv()` and `table_to_pandas()` methods take six and five arguments, respectively, the `get_bulk()` method 
-takes only three. The reason for this is simple: these methods all take the dataset name as an argument, but `table_to_pandas()` and 
-`table_to_csv()` methods also allow you to provide a dictionary of qualifiers to download just a subset of the data from NOMIS. These two
-methods also share the ability that you can ask for a specific set of columns to be output, instead of all columns. Likewise, you can also 
-define whether you want the data in counts or as percentages. In contrast, `get_bulk()` only takes the name of the dataset, `data_format` 
-argument used for specifying whether you want a pandas dataframe or a downlaoded csv file, and the `save_location` argument. 
+The `DownloadFromNomis` class gives you three main downloading methods: `table_to_csv()`, `table_to_pandas()`, and `get_bulk()`. The difference between the first two methods is that the first one saves the downloaded data to a csv file, while `table_to_pandas()` returns a pandas dataframe. The `get_bulk()` method takes an argument to specify whether you want to download the data as a csv or output a pandas dataframe. While the `table_to_csv()` and `table_to_pandas()` methods take six and five arguments, respectively, the `get_bulk()` method takes only three. The reason for this is simple: these methods all take the dataset name as an argument, but `table_to_pandas()` and `table_to_csv()` methods also allow you to provide a dictionary of qualifiers to download just a subset of the data from NOMIS. These two methods also share the ability that you can ask for a specific set of columns to be output, instead of all columns. Likewise, you can also define whether you want the data in counts or as percentages. In contrast, `get_bulk()` only takes the name of the dataset, `data_format` argument used for specifying whether you want a pandas dataframe or a downlaoded csv file, and the `save_location` argument. 
 
 To use `get_bulk()`, you type:
 
@@ -310,8 +284,7 @@ conn.table_to_csv(dataset=dataset, qualifiers=qualifiers, file_name=file_name, t
 
 
 # A full example of intended workflow
-Let's go through an example where we want to get data about religion at output area level for Lewisham and Waltham Forest from 2021 Census.
-From nomisweb.co.uk we can say that we want data from the table TS075 - Multi religion households.
+Let's go through an example where we want to get data about religion at output area level for Lewisham and Waltham Forest from 2021 Census. From nomisweb.co.uk we can say that we want data from the table TS075 - Multi religion households.
 
 First, we import our classes:
 ```
@@ -338,33 +311,58 @@ local_authorities = ['Lewisham', 'Waltham Forest']  # the input has to be a list
 ```
 Let's get the GSS codes:
 ```
-gss = SmartGeocodeLookup(starting_column=start_column, ending_column=end_column, local_authorities=local_authorities)
-oa_geocodes = gss.get_filtered_geocodes()
+gss = SmartGeocodeLookup(end_column_max_value_search=True, local_authority_constraint=True, verbose=True) 
+gss.run_graph(starting_column=start_column, ending_column=end_column, local_authorities=local_authorities) 
+oa_geocodes = gss.get_filtered_geocodes(1)
 ```
 Our function helpfully tells us that the data is all contained in one table and fetches that:
 
 ```
 Reading JSON file json_data.json
+['OA21_LSOA21_MSOA21_LAD22_EW_LU.csv', 'OA2021_to_LSOA2021_to_MSOA2021_to_LAD2022_DEC_2021.csv']
+Same Node
 Same Node
 Shortest path is in the same table
-```
-When we print `oa_geocodes`, we get the pandas dataframe:
+Shortest path is in the same table
+
+All possible shortest paths:
+
+Path 1
+
+Path 2
+Got UnicodeDecodeError 'utf-8' codec can't decode byte 0xf4 in position 49806: invalid continuation byte for file C:\Users\isipila\OneDrive - Lewisham Council\Documents\Github\LBLDataAccess\LBLDataAccess\lookups\2021\OA21_LSOA21_MSOA21_LAD22_EW_LU.csv - changing encoding to latin-1```
+Above output simply shows that the algorithm identified two equally short paths from the column LAD22CD to column OA21CD. In both cases that path occurs in the same table, but as there are two paths, there are two tables that contain this same information. Indeed, under the line `Reading JSON file json_data.json`, we have a list of the tables being joined, which in our case are simply the individual tables from which the data comes from. Lastly, we ignore the UnicodeDecodeError as it simply refers to a method of opening a file in Pandas. We handle this error by changing the encoding to latin-1, as stated in the message. 
+
+When we print `oa_geocodes[0]`, we get the pandas dataframe:
 
 ```
-        ObjectId     OA11CD     OA21CD    LAD22CD   LAD22NM LAD22NMW
-15601      15602  E00016112  E00016112  E09000023  Lewisham      NaN
-15602      15603  E00016113  E00016113  E09000023  Lewisham      NaN
-15603      15604  E00016114  E00016114  E09000023  Lewisham      NaN
-15604      15605  E00016115  E00016115  E09000023  Lewisham      NaN
-15605      15606  E00016116  E00016116  E09000023  Lewisham      NaN
-         ...        ...        ...        ...       ...      ...
-168731    168732  E00174032  E00182537  E09000023  Lewisham      NaN
-168732    168733  E00174033  E00182537  E09000023  Lewisham      NaN
-168733    168734  E00174035  E00174035  E09000023  Lewisham      NaN
-168734    168735  E00174036  E00174036  E09000023  Lewisham      NaN
-168735    168736  E00174038  E00174038  E09000023  Lewisham      NaN
+           OA21CD   LSOA21CD             LSOA21NM   MSOA21CD  \
+15188   E00016112  E01003195        Lewisham 029C  E02000681   
+15189   E00016113  E01003196        Lewisham 029D  E02000681   
+15190   E00016114  E01003197        Lewisham 029E  E02000681   
+15191   E00016115  E01003189        Lewisham 034A  E02000686   
+15192   E00016116  E01003190        Lewisham 034B  E02000686   
+...           ...        ...                  ...        ...   
+173838  E00185827  E01004327  Waltham Forest 028A  E02000922   
+173839  E00185828  E01004430  Waltham Forest 026D  E02000920   
+173840  E00185829  E01004424  Waltham Forest 022B  E02000916   
+173844  E00185833  E01004382  Waltham Forest 008C  E02000902   
+173854  E00185843  E01034485  Waltham Forest 014F  E02000908   
 
-[1619 rows x 6 columns]
+                  MSOA21NM    LAD22CD         LAD22NM LAD22NMW  
+15188         Lewisham 029  E09000023        Lewisham      NaN  
+15189         Lewisham 029  E09000023        Lewisham      NaN  
+15190         Lewisham 029  E09000023        Lewisham      NaN  
+15191         Lewisham 034  E09000023        Lewisham      NaN  
+15192         Lewisham 034  E09000023        Lewisham      NaN  
+...                    ...        ...             ...      ...  
+173838  Waltham Forest 028  E09000031  Waltham Forest      NaN  
+173839  Waltham Forest 026  E09000031  Waltham Forest      NaN  
+173840  Waltham Forest 022  E09000031  Waltham Forest      NaN  
+173844  Waltham Forest 008  E09000031  Waltham Forest      NaN  
+173854  Waltham Forest 014  E09000031  Waltham Forest      NaN  
+
+[1705 rows x 8 columns]
 ```
 
 Okay, great, we have the necessary geocodes. Now let's get the NOMIS data as a pandas dataframe too. Before, though, we need to set the API
@@ -387,7 +385,7 @@ table code for TS075 - Multi religion households, which we now know to be `NM_20
 
 ```
 dataset = 'NM_2097_1'
-geographies = list(oa_geocodes['OA21CD'].unique())
+geographies = list(oa_geocodes[0]['OA21CD'].unique())
 qualifiers = {'geography': geographies}
 
 df = conn.table_to_pandas(dataset=dataset, qualifiers=qualifiers, value_or_percent='value')
@@ -410,14 +408,11 @@ The printed dataframe is:
 12886  2021       2021  ...          12886        12888
 12887  2021       2021  ...          12887        12888
 
-[12888 rows x 28 columns]
+[13640 rows x 28 columns]
 ```
-There are 12888 rows because unlike when using bulk downloading, the data is presented depth-wise rather than breadth-wise. This means that 
-as there are eight categories for religion, we need to divide 12888 by 8 to make sure that the output matches the expected number of 
-records, which is the `len(geographies)` or 1611. 
+There are 13,640 rows because unlike when using bulk downloading, the data is presented depth-wise rather than breadth-wise. This means that as there are eight categories for religion, we need to divide 13,640 by 8 to make sure that the output matches the expected number of records, which is the `len(geographies)` or 1705. 
 
-12888/8 = 1611 so we now that we have downloaded the correct number of records, and the only thing left to do is to wrangle the data into 
-another format, but we won't be showing an example of that here.
+13,640/8 = 1705 so we now that we have downloaded the correct number of records, and the only thing left to do is to wrangle the data into another format, but we won't be showing an example of that here.
 
 ## The complete example:
 
@@ -435,10 +430,11 @@ start_column = 'LAD22CD'
 end_column = 'OA21CD'
 local_authorities = ['Lewisham', 'Waltham Forest']  # the input has to be a list and it is case sensitive
 
-gss = SmartGeocodeLookup(starting_column=start_column, ending_column=end_column, local_authorities=local_authorities)
-oa_geocodes = gss.get_filtered_geocodes()
+gss = SmartGeocodeLookup(end_column_max_value_search=True, local_authority_constraint=True, verbose=True) 
+gss.run_graph(starting_column=start_column, ending_column=end_column, local_authorities=local_authorities) 
+oa_geocodes = gss.get_filtered_geocodes(1)
 
-print(oa_geocodes)
+print(oa_geocodes[0])
 api_key = 'change_me'  # needs to be changed!!
 proxies = {'http': 'change_me', 'https': 'change_me'}  # optional, but can be beneficial
 conn = DownloadFromNomis(api_key=api_key, proxies=proxies, memorize=True)  # setting memorize=True stores your API key and proxies for future use
@@ -448,7 +444,7 @@ conn.print_table_info()
 
 
 dataset = 'NM_2097_1'
-geographies = list(oa_geocodes['OA21CD'].unique())
+geographies = list(oa_geocodes[0]['OA21CD'].unique())
 qualifiers = {'geography': geographies}
 
 df = conn.table_to_pandas(dataset=dataset, qualifiers=qualifiers, value_or_percent='value')

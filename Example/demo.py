@@ -22,25 +22,30 @@ from LBLDataAccess.access_nomis import DownloadFromNomis
 from pathlib import Path
 import json 
 import pandas as pd
+from dotenv import load_dotenv
+from os import environ
 
 pd.set_option('display.max_columns', None)
 
 # load NOMIS api key and proxies from settings.txt
-settings = Path('settings.txt')
-with open(settings, 'r') as f:
-    settings = json.load(f)
-    
-nomis_api = settings['nomis_api_key']
-proxies = settings['proxies']  # ignore this when using on Google Colab or outside organisational proxy
+dotenv_path = Path('../.env')
+load_dotenv(dotenv_path)
 
+proxies = environ.get("PROXY")   # ignore this when using on Google Colab or outside organisational proxy
+nomis_api = environ.get("NOMIS_API")
+
+print(proxies)
 #%%
-#print(proxies)
+# we initialize the SmartGeocodeLookup (but you can of course also create a new object with different parameters)
 from LBLDataAccess.load_geocodes import SmartGeocodeLookup
-gss = SmartGeocodeLookup(starting_column='WD22CD', ending_column='LSOA21CD', local_authorities=['Lewisham'])
 
-geocodes = gss.get_filtered_geocodes()
-#%%
-geocodes
+gss = SmartGeocodeLookup(end_column_max_value_search=True, local_authority_constraint=True, verbose=True)  # changing end_column_max_value_search to True gives different results from setting it False
+gss.run_graph(starting_column='WD22CD', ending_column='LSOA21CD', local_authorities=['Lewisham']) # try changing WD22CD to WD21CD and WD23CD to see how this affects the results
+
+geocodes = gss.get_filtered_geocodes(1)  # the integer input here sets the number of possible routes returned.
+print(geocodes[0])
+
+
 #%% We want to have a look at what data we want from NOMIS. We do that by making an api call to nomis and open a connection:
     
 conn = DownloadFromNomis(api_key=nomis_api, proxies=proxies, memorize=True)  
@@ -83,41 +88,38 @@ GeoHelper().available_geographies()  # all codes that we can use in our selectio
 
 #%% To get the list of folder names that we can use:
 print(GeoHelper().year_options) 
+
 #%% And then we pick 2011 to have a look at available geographies:
 GeoHelper().available_geographies('2011')
 
-# Using these tools can help you choose your right geocodes, but are not necessary once you roughly know what geographic areas there are.
+# Using these tools can help you choose your right geocodes, but are not necessary if you know what geographic areas there are.
 
 #%% Once you know the codes you want, and we want OA21CD and OA11CD for downloading data from NOMIS, we can use SmartGeocodeLookup:
 las = ['Lewisham', 'Greenwich', 'Bromley', 'Southwark', 'Tower Hamlets']
-gss = SmartGeocodeLookup(starting_column='OA21CD', ending_column='OA11CD', local_authorities=las)
 
-geocodes = gss.get_filtered_geocodes()
+gss.run_graph(starting_column='OA11CD', ending_column='OA21CD', local_authorities=las) 
+oa_geocodes = gss.get_filtered_geocodes(1)  # the integer input here sets the number of possible routes returned.
 
-# We can see that the the codes are actually in the same table.
-print(geocodes)
-#%% However, we need to get ward level information, so let's do
-gss = SmartGeocodeLookup(starting_column='WD22CD', ending_column='WD11CD', local_authorities=las)
+unique_oas_2021 = oa_geocodes[0][['OA11CD','OA21CD']].drop_duplicates()
+print(unique_oas_2021)
 
-geocodes = gss.get_filtered_geocodes()
 
-# Now, three tables have been joined together (left join). The first table was chosen based on the presence of  'WD22CD' and either 'LAD', 
-# 'UTLA', or 'LTLA' columns. The following items in the list are then the table name and column by which the table was joined to the 
-# previous table. SmartGeocodeLookup has chosen these automatically using a path finding algorithm. 
+#%% However, we also need to get ward level information, so let's instead do
+gss = SmartGeocodeLookup(end_column_max_value_search=False, local_authority_constraint=True, verbose=True)
+# we have to set the end_column_max_value_search to False (in above examples we've used True) to get our intended result. The path finding algorithm breaks down in this specific case for an unknown reason (please message me if you have an answer so I can fix it).
+gss.run_graph(starting_column='WD22CD', ending_column='WD11CD', local_authorities=las)  
+ward_geocodes = gss.get_filtered_geocodes(3)
 
-# Gotcha #1: when using Google Colab, using 'WD22CD' as the starting column in the above snippet for some reason results in the table 
-# joining to fail. This is likely because of differences in how Linux and Windows behave. To get around this, I have made the starting 
-# column 'LTLA22CD' in Google Colab which is present when printing the output. 
-# On Windows, gss = SmartGeocodeLookup(starting_column='WD22CD', ending_column='WD11CD', local_authorities=las) should work just fine.
+
 
 
 #%% Printing the geocodes, we can see that some columns have a lot of NaN values and that we didn't drop any columns when doing the joins.
-print(geocodes) #  this new table happens to also contain the OA21CD and OA11CD columns, so we're going to stick with this lookup table
+print(ward_geocodes[0])
 
 #%%  Let's use these geocodes to download only the appropriate rows from NOMIS:
     
-# GOTCHA #2: The following will result in an error because the URL becomes too long, although it works fine on Google Colab
-oa21cd = list(geocodes['OA21CD'].unique())
+# GOTCHA #1: The following will result in a ParserError because the URL becomes too long, although it works fine on Google Colab 
+oa21cd = list(unique_oas_2021['OA21CD'].unique())
 print(len(oa21cd))
 health_2021_by_oa = conn.table_to_pandas(dataset='NM_2055_1', qualifiers={'geography': oa21cd}, value_or_percent='value') 
 
@@ -127,14 +129,8 @@ health_2021_by_oa = conn.table_to_pandas(dataset='NM_2055_1', qualifiers={'geogr
 tables_to_join_2021 = []    
 
 for la in las:
-    la_subset1 = geocodes[geocodes['LTLA22NM']==la]
-    la_subset2 = geocodes[geocodes['LAD22NM']==la]
-    
-    # GOTCHA #3: note that changing the column name here from 'LTLA22NM' to 'LAD22NM' reduces the output for some reason. 
-    # The names should be exactly the same for London boroughs, but for some reason are not. Always check that the numbers match your expecetations.
-    print('LTLA22NM and LAD22NM lengths are equal:', len(la_subset1)==len(la_subset2))
-    print(len(list(la_subset1['OA21CD'].unique())), len(list(la_subset2['OA21CD'].unique())))
-    
+    la_subset1 = oa_geocodes[0][oa_geocodes[0]['LAD22NM']==la]
+        
     oa21cd = list(la_subset1['OA21CD'].unique())          
     lapd = conn.table_to_pandas(dataset='NM_2055_1', qualifiers={'geography': oa21cd}, value_or_percent='value')
     tables_to_join_2021.append(lapd)
@@ -147,12 +143,12 @@ health_2021_by_oa = pd.concat(tables_to_join_2021)
 tables_to_join_2011 = []    
 
 for la in las:
-    la_subset = geocodes[geocodes['LTLA22NM']==la]  
+    la_subset = oa_geocodes[0][oa_geocodes[0]['LAD22NM']==la]
     oa11cd = list(la_subset['OA11CD'].unique()) 
     
     print(oa11cd)  
     # GOTCHA #4: there may be NAN values mixed in and we need to remove those:
-    oa11cd = [x for x in oa11cd if x == x]
+    #oa11cd = [x for x in oa11cd if x == x]
     lapd = conn.table_to_pandas(dataset='NM_1546_1', qualifiers={'geography': oa11cd}, value_or_percent='value')
     tables_to_join_2011.append(lapd)
 
@@ -173,12 +169,12 @@ print(health_2021_pivot.head(10))
 print(health_2011_pivot.head(10))
 #%% To map ward level information, we'll first sum the appropriate rows in the pivot tables:
 
-wards_2022 = list(geocodes['WD22NM'].unique())
+wards_2022 = list(ward_geocodes[0]['WD22NM'].unique())
 
 oa_11_by_ward_22_dict = {'Ward': [], 'WD22CD':[], 'OA11CD': []}
 oa_21_by_ward_22_dict = {'Ward': [], 'WD22CD':[],'OA21CD': []}
 for ward in wards_2022:
-    ward_subset = geocodes[geocodes['WD22NM'] == ward]
+    ward_subset = ward_geocodes[0][ward_geocodes[0]['WD22NM'] == ward]
     ward_subset_2011 = ward_subset.dropna(subset=['OA11CD'])  # Again, need to drop NaN values
     ward_subset_2021 = ward_subset.dropna(subset=['OA21CD'])  # Again, need to drop NaN values
     ward_2022_by_oa11 = list(ward_subset_2011['OA11CD'].unique())
@@ -207,12 +203,13 @@ print(health_2021_summed.head())
 #%% Get percentages
 
 columns = list(health_2011_summed.columns)
+print(columns)
 for col in columns:
     true_values = [True for i in range(len(health_2011_summed[f"{col}"]))]
     percentages = (health_2011_summed[f"{col}"]/health_2011_summed['All categories: General health'])*100
     health_2011_summed[f'{col}_percent'] = health_2011_summed[f"{col}"].mask(true_values, percentages)
 
-
+#%%
 columns = list(health_2021_summed.columns)
 for col in columns:
     true_values = [True for i in range(len(health_2021_summed[f"{col}"]))]
