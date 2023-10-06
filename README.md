@@ -11,6 +11,7 @@ class the speed will be back to normal.
 
 ## Getting started
 To install this package:
+
 `python -m pip install git+https://github.com/Ilkka-LBL/LBLDataAccess.git`
 
 Or 
@@ -18,6 +19,7 @@ Or
 `python -m pip install LBLDataAccess==0.2.2`
 
 If using Conda, you may need to just write:
+
 `pip install git+https://github.com/Ilkka-LBL/LBLDataAccess.git`
 
 or 
