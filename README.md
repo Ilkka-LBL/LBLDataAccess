@@ -332,7 +332,9 @@ All possible shortest paths:
 Path 1
 
 Path 2
-Got UnicodeDecodeError 'utf-8' codec can't decode byte 0xf4 in position 49806: invalid continuation byte for file C:\Users\isipila\OneDrive - Lewisham Council\Documents\Github\LBLDataAccess\LBLDataAccess\lookups\2021\OA21_LSOA21_MSOA21_LAD22_EW_LU.csv - changing encoding to latin-1```
+Got UnicodeDecodeError 'utf-8' codec can't decode byte 0xf4 in position 49806: invalid continuation byte for file C:\Users\isipila\OneDrive - Lewisham Council\Documents\Github\LBLDataAccess\LBLDataAccess\lookups\2021\OA21_LSOA21_MSOA21_LAD22_EW_LU.csv - changing encoding to latin-1
+```
+
 Above output simply shows that the algorithm identified two equally short paths from the column LAD22CD to column OA21CD. In both cases that path occurs in the same table, but as there are two paths, there are two tables that contain this same information. Indeed, under the line `Reading JSON file json_data.json`, we have a list of the tables being joined, which in our case are simply the individual tables from which the data comes from. Lastly, we ignore the UnicodeDecodeError as it simply refers to a method of opening a file in Pandas. We handle this error by changing the encoding to latin-1, as stated in the message. 
 
 When we print `oa_geocodes[0]`, we get the pandas dataframe:
