@@ -280,7 +280,7 @@ class LBLToNomis:
     
     
 class DownloadFromNomis(LBLToNomis):
-    """Subclass for downloading data."""
+    """Wrapper class for downloading data."""
     
     def __init__(self, *args, **kwargs):
         """Initialize DownloadFromNomis."""
