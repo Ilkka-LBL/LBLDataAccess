@@ -333,8 +333,10 @@ class DownloadFromNomis(LBLToNomis):
     
     def get_bulk(self, dataset: str = None, data_format: str = 'pandas', save_location: str = '../nomis_download/'):
         """Download bulk data as csv or as Pandas dataframe."""
+        
+        assert data_format in ['csv', 'download', 'pandas', 'df'], 'Data format must be one of "csv" (or "download") or "pandas" (or "df").'
         self.bulk_download(dataset)
-        if data_format == 'csv' or data_format=='download':
+        if data_format in ['csv', 'download']:
             file_name = f"{dataset}_bulk.csv"
             
             if Path(save_location).exists() is False:
@@ -350,7 +352,7 @@ class DownloadFromNomis(LBLToNomis):
                     with open(file_name, 'wb') as f:
                         copyfileobj(r.raw, f)
                 
-        elif data_format == 'pandas' or data_format == 'df':
+        elif data_format in ['pandas', 'df']:
             try:
                 with requestget(self.url, proxies=self.proxies, stream=True) as r:
                     raw_text = pd.read_csv(r.raw)

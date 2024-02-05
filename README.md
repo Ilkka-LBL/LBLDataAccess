@@ -1,5 +1,11 @@
 # Combining NOMIS data and ONS Geoportal GSS codes
 ---
+### TODO:
+I am currently working towards adding Open Geography API access so that I can remove the dependency on downloaded and frankly messy lookup tables. This class will additionally help with accessing and downloading information from Open Geography Portal and streamlining workflows. 
+
+This is available in branch Version-0.3 and will be later integrated to the PYPI package as well. 
+
+
 ### Purpose
 The purpose of this Python package is to allow easier navigation of the NOMIS API and easier collection of GSS geocodes from ONS Open Geography Portal. The GSS geocodes are necessary for selecting the right tables in the NOMIS API, which can otherwise be very difficult to navigate.
 
