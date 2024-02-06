@@ -1,10 +1,11 @@
-#%%
 from requests import get as request_get
 from dataclasses import dataclass
 from typing import Any, Dict, List
 import geopandas as gpd
 import json
 import re
+from datetime import datetime
+import pandas as pd 
 
 @dataclass
 class Service:
@@ -15,6 +16,9 @@ class Service:
     layers: List[Dict[str, Any]] = None
     tables: List[Dict[str, Any]] = None
     output_formats: List[str] = None
+    metadata: json = None
+    fields: List[str] = None
+    primary_key: str = None
 
     def featureservers(self) -> 'Service':
         if self.type == 'FeatureServer':
@@ -42,13 +46,32 @@ class Service:
         self.layers = service_info.get('layers', [])
         self.tables = service_info.get('tables', [])
         self.output_formats = service_info.get('supportedQueryFormats', [])
+
         self.metadata = self.service_metadata().json()
         self.fields = self.metadata.get('fields', [])
         self.primary_key = self.metadata.get('uniqueIdField')
         lastedit = self.metadata.get('editingInfo', {})
-        self.lasteditdate = lastedit['lastEditDate']
-        self.schemalasteditdate = lastedit['schemaLastEditDate']
-        self.datalasteditdate = lastedit['dataLastEditDate']
+        try:
+            self.lasteditdate = lastedit['lastEditDate']  # in milliseconds - to get time, use datetime.fromtimestamp(int(og.feature_server.lasteditdate/1000)).strftime('%d-%m-%Y %H:%M:%S')
+        except KeyError:
+            self.lasteditdate = ''
+        try:
+            self.schemalasteditdate = lastedit['schemaLastEditDate']
+        except KeyError:
+            self.schemalasteditdate = ''        
+        try:
+            self.datalasteditdate = lastedit['dataLastEditDate']
+
+        except KeyError:
+            self.datalasteditdate = ''
+
+    def lookup_format(self) -> Dict:
+        self.service_attributes()
+        try:
+            row_data = {'name':[self.name], 'fields': [[field['name'] for field in self.fields]], 'url': [self.url], 'description': [self.description], 'primary_key': [self.primary_key['name']], 'lasteditdate': [datetime.fromtimestamp(int(self.lasteditdate/1000)).strftime('%d-%m-%Y %H:%M:%S')]}
+        except TypeError:
+            row_data = {'name':[self.name], 'fields': [[field['name'] for field in self.fields]], 'url': [self.url], 'description': [self.description], 'primary_key': [self.primary_key['name']], 'lasteditdate': ['']}
+        return row_data
 
 class BaseOpenGeography:
 
@@ -69,11 +92,14 @@ class BaseOpenGeography:
 
     def _load_all_services(self) -> None:
         self.service_table = {}
-        for service in self.services:             
+        for service in self.services:
             service_obj = Service(service['name'], service['type'], service['url'])
-            self.service_table[f"{service['name']} ({service['type']})"] = service_obj
+            self.service_table[f"{service['name']}"] = service_obj
 
     def print_all_services(self) -> None:
+        """
+        Print name, type, and url of all services available through Open Geography Portal.
+        """
         for service_name, service_obj in self.service_table.items():
             print(f"Service: {service_name}\nURL: {service_obj.url}\nServer type: {service_obj.type}\n")
 
@@ -86,35 +112,68 @@ class BaseOpenGeography:
 
         if server_type == 'feature':
             for service in self.services:
-                feature_server = self.service_table.get(f"{service['name']} ({service['type']})").featureservers()
+                feature_server = self.service_table.get(f"{service['name']}").featureservers()
                 if feature_server:
                     print('Service:', feature_server.name, '\nURL:', feature_server.url, '\nServer type:', feature_server.type, '\n')
 
         elif server_type == 'map':
             for service in self.services:
-                map_server = self.service_table.get(f"{service['name']} ({service['type']})").mapservers()
+                map_server = self.service_table.get(f"{service['name']}").mapservers()
                 if map_server:
                     print('Service:', map_server.name, '\nURL:', map_server.url, '\nServer type:', map_server.type, '\n')
 
         elif server_type == 'wfs':
             for service in self.services:
-                wfs_server = self.service_table.get(f"{service['name']} ({service['type']})").wfsservers()
+                wfs_server = self.service_table.get(f"{service['name']}").wfsservers()
                 if wfs_server:
                     print('Service:', wfs_server.name, '\nURL:', wfs_server.url, '\nServer type:', wfs_server.type, '\n')
 
         else:
             print(f"{server_type} is not an identifiable server type. Try one of 'feature', 'map', or 'wfs'.")
 
+    def make_lookup(self, service_type: str = 'feature', included_services: List[str] = []) -> pd.DataFrame:
+        """
+        Make a Pandas Dataframe of selected tables.
+            - service_type (str): Select the type of server. Must be one of 'feature', 'map', 'wfs'. (default = 'feature').
+            - included_services (List): An optional argument to select which services should be included in the set of tables to use for lookup. Each item of the list should be the name of the service excluding the type of server in brackets. E.g. ['Age_16_24_TTWA'].
+        """
+        
+        assert service_type in ['feature', 'map', 'wfs'], "service_type not one of: 'feature', 'map', 'wfs'"
+
+        if included_services:
+            service_table_to_loop = {k: self.service_table.get(k, None) for k in included_services if k in self.service_table}
+
+        else:
+            service_table_to_loop = self.service_table
+
+        lookup_table = []
+        for service_name, service_obj in service_table_to_loop.items():
+            if str(service_obj.type).lower() == self.server_types[service_type].lower():
+                print(f"Adding service {service_name}")
+                row_item = service_obj.lookup_format()
+                lookup_table.append(row_item)
+
+        print("Creating Pandas dataframe")
+        lookup_dfs = [pd.DataFrame.from_dict(item) for item in lookup_table]
+        
+        if len(lookup_dfs) == 0:
+            print("No valid data found. Exiting.")
+            return
+        else:
+            lookup_df = pd.concat(lookup_dfs)
+            return lookup_df
+
 class FeatureServer(BaseOpenGeography):
     
     def select_service(self, service_name: str = None) -> None:
         """
-        Select a service given its name
+        Select a service given its name.
         """
         try:
             self.service_name = service_name
-            self.feature_server = self.service_table.get(f"{self.service_name} ({self.server_types['feature']})").featureservers() 
+            self.feature_server = self.service_table.get(self.service_name).featureservers()
             self.feature_server.service_attributes()
+
         except AttributeError as e:
             print(f"{e} - the selected table does not appear to have a feature server. Check table name exists in list of services or your spelling.")
 
@@ -124,6 +183,15 @@ class FeatureServer(BaseOpenGeography):
         """
         if hasattr(self, 'feature_server'):
             return self.feature_server.service_details().json()
+        else:
+            raise AttributeError("Choose service with select_service(service_name='') method first")
+
+    def service_details_json(self) -> Any:
+        """
+        Returns the service metadata as a json.
+        """
+        if hasattr(self, 'feature_server'):
+            return self.feature_server.service_metadata().json()
         else:
             raise AttributeError("Choose service with select_service(service_name='') method first")
 
@@ -259,3 +327,5 @@ class FeatureServer(BaseOpenGeography):
     def _record_count(self, url: str, sql_row_filter: str = '1=1') -> int:
         params = {'returnCountOnly': True, 'where': sql_row_filter, 'f':'json'}
         return request_get(url, params=params).json()['count']
+
+og = FeatureServer()
