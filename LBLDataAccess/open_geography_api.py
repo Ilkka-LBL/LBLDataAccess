@@ -21,26 +21,50 @@ class Service:
     primary_key: str = None
 
     def featureservers(self) -> 'Service':
+        """
+            Self-filtering method.
+        """
+
         if self.type == 'FeatureServer':
             return self
 
     def mapservers(self) -> 'Service':
+        """
+            Self-filtering method.
+        """
+
         if self.type == 'MapServer':
             return self
 
     def wfsservers(self) -> 'Service':
+        """
+            Self-filtering method.
+        """
+
         if self.type == 'WFSServer':
             return self
 
     def service_details(self) -> Any:
+        """
+            Make a URL GET request to get service details.
+        """
+
         service_url = f"{self.url}?&f=json"
         return request_get(service_url)
     
     def service_metadata(self) -> Any:
+        """
+            Make a URL GET request to get service metadata.
+        """
+
         service_url = f"{self.url}/0?f=json"
         return request_get(service_url)
         
     def service_attributes(self) -> None:
+        """
+            Populate service attributes by making two separate GET requests.
+        """
+
         service_info = self.service_details().json()
         self.description = service_info.get('description')
         self.layers = service_info.get('layers', [])
@@ -66,6 +90,10 @@ class Service:
             self.datalasteditdate = ''
 
     def lookup_format(self) -> Dict:
+        """
+            Format the service attribute data.
+        """
+
         self.service_attributes()
         try:
             row_data = {'name':[self.name], 'fields': [[field['name'] for field in self.fields]], 'url': [self.url], 'description': [self.description], 'primary_key': [self.primary_key['name']], 'lasteditdate': [datetime.fromtimestamp(int(self.lasteditdate/1000)).strftime('%d-%m-%Y %H:%M:%S')]}
@@ -74,6 +102,10 @@ class Service:
         return row_data
 
 class BaseOpenGeography:
+
+    """
+        Base class for Open Geography API.    
+    """
 
     def __init__(self) -> None:
         self.base_url = "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services?f=json"
@@ -88,9 +120,17 @@ class BaseOpenGeography:
         self.server_types = {'feature': 'FeatureServer', 'map': 'MapServer', 'wfs': 'WFSServer'}
 
     def _validate_response(self) -> None:
+        """
+            Validation method.
+        """
+
         assert self.output.status_code == 200, f"Request failed with status code: {self.output.status_code}"
 
     def _load_all_services(self) -> None:
+        """
+            Helper method used in initializing the class.
+        """
+
         self.service_table = {}
         for service in self.services:
             service_obj = Service(service['name'], service['type'], service['url'])
@@ -98,16 +138,18 @@ class BaseOpenGeography:
 
     def print_all_services(self) -> None:
         """
-        Print name, type, and url of all services available through Open Geography Portal.
+            Print name, type, and url of all services available through Open Geography Portal.
         """
         for service_name, service_obj in self.service_table.items():
             print(f"Service: {service_name}\nURL: {service_obj.url}\nServer type: {service_obj.type}\n")
 
     def print_services_by_server_type(self, server_type: str = 'feature') -> None:
         """
-        Print services given a server type. The input to 'server_type' should be one of 'feature', 'map' or 'wfs'.
-        Usually, it is enough to leave the server_type parameter unchanged, particularly as the MapServer and WFSServers
-        are currently unsupported by this package.
+            Print services given a server type. 
+
+            Arguments:
+                server_type {str}   -   The input to 'server_type' should be one of 'feature', 'map' or 'wfs' (default = 'feature'). Usually, it is enough to leave the server_type parameter unchanged, particularly as the MapServer and WFSServers are currently unsupported by this package.
+
         """
 
         if server_type == 'feature':
@@ -133,9 +175,12 @@ class BaseOpenGeography:
 
     def make_lookup(self, service_type: str = 'feature', included_services: List[str] = []) -> pd.DataFrame:
         """
-        Make a Pandas Dataframe of selected tables.
-            - service_type (str): Select the type of server. Must be one of 'feature', 'map', 'wfs'. (default = 'feature').
-            - included_services (List): An optional argument to select which services should be included in the set of tables to use for lookup. Each item of the list should be the name of the service excluding the type of server in brackets. E.g. ['Age_16_24_TTWA'].
+            Make a Pandas Dataframe of selected tables.
+
+            Arguments:
+                service_type {str}  -   Select the type of server. Must be one of 'feature', 'map', 'wfs'. (default = 'feature').
+                
+                included_services List[str] -   An optional argument to select which services should be included in the set of tables to use for lookup. Each item of the list should be the name of the service excluding the type of server in brackets. E.g. ['Age_16_24_TTWA'].
         """
         
         assert service_type in ['feature', 'map', 'wfs'], "service_type not one of: 'feature', 'map', 'wfs'"
@@ -167,7 +212,10 @@ class FeatureServer(BaseOpenGeography):
     
     def select_service(self, service_name: str = None) -> None:
         """
-        Select a service given its name.
+            Select a service given its name.
+
+            Arguments:
+                service_name {str}  -   Service name.
         """
         try:
             self.service_name = service_name
@@ -179,7 +227,7 @@ class FeatureServer(BaseOpenGeography):
 
     def service_details_json(self) -> Any:
         """
-        Returns detailed information regarding the service as a json.
+            eturns detailed information regarding the service as a json.
         """
         if hasattr(self, 'feature_server'):
             return self.feature_server.service_details().json()
@@ -188,7 +236,7 @@ class FeatureServer(BaseOpenGeography):
 
     def service_details_json(self) -> Any:
         """
-        Returns the service metadata as a json.
+            Returns the service metadata as a json.
         """
         if hasattr(self, 'feature_server'):
             return self.feature_server.service_metadata().json()
@@ -197,7 +245,7 @@ class FeatureServer(BaseOpenGeography):
 
     def service_attributes(self) -> None:
         """
-        Prints key information about the service in an easily readable format.
+            Prints key information about the service in an easily readable format.
         """
         if hasattr(self, 'feature_server'):
             print('Name:', self.feature_server.name)
@@ -211,21 +259,28 @@ class FeatureServer(BaseOpenGeography):
             raise AttributeError("Choose service with select_service(service_name='') method first")
 
 
-    def download(self, fileformat: str = 'geojson', sql_row_filter: str = '1=1', output_fields: str = '*', params: Dict = None, visit_all_links: bool = False, n_sample_rows: int = -1) -> List[Dict[str, Any]]:
+    def download(self, fileformat: str = 'geojson', sql_row_filter: str = '1=1', output_fields: str = '*', params: Dict[str, str] = None, visit_all_links: bool = False, n_sample_rows: int = -1) -> List[Dict[str, Any]]:
         """
-        Download data from Open Geography Portal.
+            Download data from Open Geography Portal.
 
-        Parameters:
-        - fileformat (str): The format in which to download the data (default: 'geojson').
-        - sql_row_filter (str): SQL filter to apply to the rows (default: '1=1'). 
-        - output_fields (str): Fields to include in the output (default: '*').
-        - params (dict): If you want to manually override the search parameters. Only change if you cannot get the data otherwise. 
-        - visit_all_links (bool): Some tables may have more than one link to visit. However, typically the first one is enough, so set this to True if you think you're missing data. Note that this method does not handle duplicate rows so you will have to deal with any duplication afterwards. 
-        - n_sample_rows (int): This parameter helps with testing as it lets you quickly select the first n rows.
+            Arguments:
+                fileformat {str}    -   The format in which to download the data (default: 'geojson').
+            
+                sql_row_filter {str}    -   SQL filter to apply to the rows (default: '1=1'). 
+                
+                output_fields {str} -   Fields to include in the output (default: '*').
+                
+                params {Dict[str, str]} -   If you want to manually override the search parameters. Only change if you cannot get the data otherwise. 
+                
+                visit_all_links {bool}  -   Some tables may have more than one link to visit. However, typically the first one is enough, so set this to True if you think you're missing data. Note that this method does not handle duplicate rows so you will have to deal with any duplication afterwards. 
+            
+                n_sample_rows {int} -   This parameter helps with testing as it lets you quickly select the first n rows.
 
-        Returns:
-        - List[Dict[str, Any]]: List of dictionaries representing the downloaded data.
+            Returns:
+                List[Dict[str, Any]]: List of dictionaries representing the downloaded data.
+        
         """
+
         primary_key = self.feature_server.primary_key['name']
 
         assert isinstance(n_sample_rows, int), "n_sample_rows is not int"
@@ -325,6 +380,16 @@ class FeatureServer(BaseOpenGeography):
             raise AttributeError("Choose service with select_service(service_name='') method first")
 
     def _record_count(self, url: str, sql_row_filter: str = '1=1') -> int:
+        """
+            Helper method to count records.
+
+            Arguments:
+                url {str}   -   URL to check.
+
+                sql_row_filter {str}    -   SQL code for filtering the data.
+
+        """
+
         params = {'returnCountOnly': True, 'where': sql_row_filter, 'f':'json'}
         return request_get(url, params=params).json()['count']
 

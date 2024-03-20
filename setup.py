@@ -31,5 +31,8 @@ setup(
         'requests',
         'pandas',
         'openpyxl',
+        'typing', 
+        'copy',
+        'dataclasses'
     ],
 )

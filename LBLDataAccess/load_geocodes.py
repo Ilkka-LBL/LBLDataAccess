@@ -65,24 +65,17 @@ def BFS_SP(graph: Dict, start: str, goal: str) -> List[Any]:
 class SmartGeocodeLookup:
     """Use graph theory to find shortest path between table columns.
     
-    This class works as follows. The user provides the names of the starting and ending columns, and a list of local authorities when 
-    initialising the class. They can then get the appropriate subset of the geocodes using the get_filtered_geocodes() method.
+    This class works as follows. The user provides the names of the starting and ending columns, and a list of local authorities when initialising the class. They can then get the appropriate subset of the geocodes using the get_filtered_geocodes() method.
     
-    Internally, on initialising the class, a json file is either created based on the location of the lookup tables or read, if the json 
-    file exists. Then, using the information contained in the json file, a graph of connections between table columns is created using the run_graph() method. 
-    Following the creation of the graph, all possible starting points are searched for (i.e. which tables contain the user-provided starting_table). 
-    After this, we look for the shortest paths. To do this, we look for all possible paths from all starting_columns to ending_columns and
-    count how many steps there are between each table. We choose the shortest link, as we then join these tables together iteratively using
-    outer join. Finally, we filter the table by the local_authorities list.
+    Internally, on initialising the class, a json file is either created based on the location of the lookup tables or read, if the json file exists. Then, using the information contained in the json file, a graph of connections between table columns is created using the run_graph() method. 
+    Following the creation of the graph, all possible starting points are searched for (i.e. which tables contain the user-provided starting_table). After this, we look for the shortest paths. To do this, we look for all possible paths from all starting_columns to ending_columns and count how many steps there are between each table. We choose the shortest link, as we then join these tables together iteratively using outer join. Finally, we filter the table by the local_authorities list.
 
     The intended workflow is:
     gss = SmartGeocodeLookup(end_column_max_value_search=False)  
     gss.run_graph(starting_column='LAD23CD', ending_column='OA21CD', local_authorities=['Lewisham', 'Southwark']) # the starting and ending columns should end in CD
     codes = gss.get_filtered_geocodes()
     
-    Abov, change the end_column_max_value_search parameter to True if you want to limit the search to only tables with the maximum number of unique values. 
-    This can help with issues where lookups already exist, but which omit the full range of values. In other words, the lookups created by Open Geography Portal are intersections, 
-    but we may instead be interested in the right join. However, this may result in some tables being omitted.
+    Above, change the end_column_max_value_search parameter to True if you want to limit the search to only tables with the maximum number of unique values. This can help with issues where lookups already exist, but which omit the full range of values. In other words, the lookups created by Open Geography Portal are intersections, but we may instead be interested in the right join. However, this may result in some tables being omitted.
     
     """
     
@@ -108,17 +101,17 @@ class SmartGeocodeLookup:
 
         """
 
-        self.starting_column = starting_column.upper()                              # start point in the path search
-        self.ending_column = ending_column.upper()                                  # end point in the path search
+        self.starting_column = starting_column.upper()                      # start point in the path search
+        self.ending_column = ending_column.upper()                          # end point in the path search
         self.local_authorities = local_authorities                          # list of local authorities to get the geocodes for
 
         if self.starting_column and self.ending_column and self.local_authorities:
             self.graph, self.table_column_pairs = self.create_graph()       # create the graph for connecting columns
             if self.local_authority_constraint:
-                self.starting_points = self.get_starting_point()                # find all possible starting points given criteria
+                self.starting_points = self.get_starting_point()            # find all possible starting points given criteria
             else:
                 self.starting_points = self.get_starting_point_without_local_authority_constraint()
-            self.shortest_paths = self.find_shortest_paths()                  # get the shortest path
+            self.shortest_paths = self.find_shortest_paths()                # get the shortest path
         
         else:
             raise Exception("You haven't provided all parameters. Make sure the local_authorities list is not empty.")
